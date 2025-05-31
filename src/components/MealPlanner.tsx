@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shuffle, ChefHat, BookOpen, Loader2, Download } from 'lucide-react'; // Import Download icon
+import { Shuffle, ChefHat, BookOpen, Loader2, Download, Save } from 'lucide-react'; // Import Save icon
 import { toast } from '@/components/ui/use-toast';
 import MealCalendar from './MealCalendar';
 import { useAppContext } from '@/contexts/AppContext'; // Import useAppContext
@@ -45,9 +45,10 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
   setSelectedMonth,
   allRecipes // Receive allRecipes
 }) => {
-  const { user, selectedCookbook, guestRecipes } = useAppContext(); // Get selectedCookbook and guestRecipes
+  const { user, selectedCookbook, guestRecipes, saveMealPlan } = useAppContext(); // Get selectedCookbook, guestRecipes, and saveMealPlan
   const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
   const [generatingRecipe, setGeneratingRecipe] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -202,6 +203,35 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
     }
   };
 
+  const handleSaveMealPlan = async () => {
+    if (!user) {
+      toast({
+        title: 'Sign In Required',
+        description: 'Please sign in to save meal plans.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    if (mealPlan.length === 0) {
+      toast({
+        title: 'No Plan to Save',
+        description: 'Generate a meal plan first before saving.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setSavingPlan(true);
+    try {
+      const planName = `${selectedMonth} ${new Date().getFullYear()} Plan`;
+      await saveMealPlan(planName, selectedMonth, new Date().getFullYear(), mealPlan);
+    } catch (error) {
+      // Error handled by AppContext's saveMealPlan
+    } finally {
+      setSavingPlan(false);
+    }
+  };
+
   const handleExportMealPlan = async () => {
     console.log('Export button clicked. Current meal plan length:', mealPlan.length);
     try {
@@ -302,11 +332,12 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
             {mealPlan.length > 0 && (
               <div className="flex justify-center mt-4">
                 <Button 
-                  onClick={handleExportMealPlan}
-                  className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground hover-lift transition-all duration-300 shadow-lg"
+                  onClick={handleSaveMealPlan}
+                  disabled={savingPlan || !user}
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white hover-lift transition-all duration-300 shadow-lg"
                 >
-                  <Download className="h-4 w-4 mr-2" />
-                  Export Calendar PDF
+                  <Save className="h-4 w-4 mr-2" />
+                  {savingPlan ? 'Saving...' : 'Save Current Plan'}
                 </Button>
               </div>
             )}

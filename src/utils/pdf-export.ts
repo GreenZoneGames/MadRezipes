@@ -12,7 +12,7 @@ interface Recipe {
   meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string;
 }
 
-export interface MealPlan {
+export interface MealPlan { // This is the interface for a single meal entry in the plan
   date: string;
   recipe: Recipe;
   mealType?: 'breakfast' | 'lunch' | 'dinner';
@@ -55,7 +55,12 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  const fullMonthPlan = mealPlan.length > 0 ? mealPlan : generateFullMonthPlan(allRecipes, selectedMonth);
+  // Ensure mealPlan is not empty. If it is, try to generate a plan from allRecipes.
+  const planToUse = mealPlan.length > 0 ? mealPlan : generateFullMonthPlan(allRecipes, selectedMonth);
+
+  if (planToUse.length === 0) {
+    throw new Error("No meal plan data available to export.");
+  }
 
   // Page 1: Calendar View
   doc.setFillColor(41, 37, 36);
@@ -109,7 +114,7 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
 
         // Check for meals on this date
         const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
-        const dayMeals = fullMonthPlan.filter(m => m.date === dateStr);
+        const dayMeals = planToUse.filter(m => m.date === dateStr);
 
         let mealY = y + 10;
         const mealTypesForDisplay: ('breakfast' | 'lunch' | 'dinner')[] = ['breakfast', 'lunch', 'dinner'];
@@ -153,7 +158,7 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
   doc.text('Combined ingredients for all planned meals', pageWidth / 2, 30, { align: 'center' });
 
   const ingredientMap = new Map<string, number>();
-  fullMonthPlan.forEach(meal => {
+  planToUse.forEach(meal => {
     meal.recipe.ingredients.forEach(ingredient => {
       const cleanIngredient = ingredient.toLowerCase().trim();
       ingredientMap.set(cleanIngredient, (ingredientMap.get(cleanIngredient) || 0) + 1);

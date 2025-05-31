@@ -54,6 +54,22 @@ interface Recipe {
   cookbook_id?: string; // Changed to snake_case
 }
 
+export interface MealPlanEntry { // Renamed to avoid conflict with MealPlan interface in MealPlanner
+  date: string;
+  recipe: Recipe;
+  mealType?: 'breakfast' | 'lunch' | 'dinner';
+}
+
+interface SavedMealPlan {
+  id: string;
+  user_id: string;
+  name: string;
+  month: string;
+  year: number;
+  plan_data: MealPlanEntry[];
+  created_at: string;
+}
+
 interface AppContextType {
   sidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -63,6 +79,7 @@ interface AppContextType {
   friends: Friend[];
   guestCookbooks: Cookbook[]; // New state for guest cookbooks
   guestRecipes: Recipe[]; // New state for guest recipes
+  savedMealPlans: SavedMealPlan[]; // New state for saved meal plans
   setGuestRecipes: React.Dispatch<React.SetStateAction<Recipe[]>>; // Added to default context
   setSelectedCookbook: (cookbook: Cookbook | null) => void;
   signIn: (email: string, password: string) => Promise<void>;
@@ -80,6 +97,9 @@ interface AppContextType {
   addRecipeToCookbook: (recipe: Recipe, cookbookId: string) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   syncGuestDataToUser: () => Promise<void>; // New function to sync guest data
+  saveMealPlan: (name: string, month: string, year: number, planData: MealPlanEntry[]) => Promise<void>; // New
+  loadMealPlans: (userId: string) => Promise<void>; // New
+  deleteMealPlan: (planId: string) => Promise<void>; // New
 }
 
 const defaultAppContext: AppContextType = {
@@ -91,6 +111,7 @@ const defaultAppContext: AppContextType = {
   friends: [],
   guestCookbooks: [],
   guestRecipes: [],
+  savedMealPlans: [], // Default for new state
   setGuestRecipes: () => {}, // Dummy function added here
   setSelectedCookbook: () => {},
   signIn: async () => {},
@@ -108,6 +129,9 @@ const defaultAppContext: AppContextType = {
   addRecipeToCookbook: async () => {},
   sendPasswordResetEmail: async () => {},
   syncGuestDataToUser: async () => {},
+  saveMealPlan: async () => {}, // Dummy
+  loadMealPlans: async () => {}, // Dummy
+  deleteMealPlan: async () => {}, // Dummy
 };
 
 const AppContext = createContext<AppContextType>(defaultAppContext);
@@ -121,6 +145,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cookbooks, setCookbooks] = useState<Cookbook[]>([]);
   const [selectedCookbook, setSelectedCookbook] = useState<Cookbook | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [savedMealPlans, setSavedMealPlans] = useState<SavedMealPlan[]>([]); // New state
   const [guestCookbooks, setGuestCookbooks] = useState<Cookbook[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('guestCookbooks');
@@ -203,6 +228,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.error('Load friends error:', error);
     }
   };
+
+  const loadMealPlans = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('meal_plans')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setSavedMealPlans(data || []);
+    } catch (error) {
+      console.error('Load meal plans error:', error);
+      toast({
+        title: 'Error loading meal plans',
+        description: 'Failed to fetch your saved meal plans.',
+        variant: 'destructive'
+      });
+    }
+  }, []);
 
   const syncGuestDataToUser = useCallback(async () => {
     if (!user || (guestCookbooks.length === 0 && guestRecipes.length === 0)) {
@@ -322,6 +367,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               setUser(newUserData);
               loadCookbooks(newUserData.id);
               loadFriends(newUserData.id);
+              loadMealPlans(newUserData.id); // Load meal plans on login
               if (guestCookbooks.length > 0 || guestRecipes.length > 0) {
                 syncGuestDataToUser();
               }
@@ -335,6 +381,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setUser(userData);
           loadCookbooks(userData.id);
           loadFriends(userData.id);
+          loadMealPlans(userData.id); // Load meal plans on login
           // Sync guest data after user is set and their data is loaded
           if (guestCookbooks.length > 0 || guestRecipes.length > 0) {
             syncGuestDataToUser();
@@ -344,13 +391,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setUser(null);
         setCookbooks([]); // Clear Supabase cookbooks if logged out
         setFriends([]); // Clear Supabase friends if logged out
+        setSavedMealPlans([]); // Clear saved meal plans if logged out
       }
     } catch (error) {
       console.error('Check user error:', error);
       // If there's an error checking user, assume logged out state
       setUser(null);
     }
-  }, [guestCookbooks, guestRecipes, syncGuestDataToUser, selectedCookbook]); // Added selectedCookbook to dependencies
+  }, [guestCookbooks, guestRecipes, syncGuestDataToUser, selectedCookbook, loadMealPlans]); // Added selectedCookbook to dependencies
 
   useEffect(() => {
     checkUser();
@@ -410,6 +458,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCookbooks([]);
     setSelectedCookbook(null);
     setFriends([]);
+    setSavedMealPlans([]); // Clear saved meal plans on explicit sign out
     setGuestCookbooks([]); // Clear guest data on explicit sign out
     setGuestRecipes([]);
     if (typeof window !== 'undefined') {
@@ -602,7 +651,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const { data: existingCookbook, error: fetchError } = await supabase
           .from('cookbooks')
           .select('id')
-          .eq('user.id', user.id) // Corrected to user.id
+          .eq('user_id', user.id) // Corrected to user.id
           .ilike('name', finalNewName)
           .single();
 
@@ -893,6 +942,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const saveMealPlan = async (name: string, month: string, year: number, planData: MealPlanEntry[]) => {
+    if (!user) {
+      toast({
+        title: 'Sign In Required',
+        description: 'Please sign in to save meal plans.',
+        variant: 'destructive'
+      });
+      throw new Error('User not logged in.');
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('meal_plans')
+        .insert({
+          user_id: user.id,
+          name,
+          month,
+          year,
+          plan_data: planData,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      setSavedMealPlans(prev => [...prev, data]);
+      toast({
+        title: 'Meal Plan Saved!',
+        description: `"${name}" for ${month} ${year} has been saved.`,
+      });
+    } catch (error: any) {
+      console.error('Error saving meal plan:', error);
+      toast({
+        title: 'Failed to Save Meal Plan',
+        description: error.message || 'An error occurred while saving the meal plan.',
+        variant: 'destructive'
+      });
+      throw error;
+    }
+  };
+
+  const deleteMealPlan = async (planId: string) => {
+    if (!user) {
+      toast({
+        title: 'Sign In Required',
+        description: 'Please sign in to delete meal plans.',
+        variant: 'destructive'
+      });
+      throw new Error('User not logged in.');
+    }
+
+    try {
+      const { error } = await supabase
+        .from('meal_plans')
+        .delete()
+        .eq('id', planId)
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setSavedMealPlans(prev => prev.filter(plan => plan.id !== planId));
+      toast({
+        title: 'Meal Plan Deleted!',
+        description: 'The meal plan has been removed.',
+      });
+    } catch (error: any) {
+      console.error('Error deleting meal plan:', error);
+      toast({
+        title: 'Failed to Delete Meal Plan',
+        description: error.message || 'An error occurred while deleting the meal plan.',
+        variant: 'destructive'
+      });
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -904,6 +1027,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         friends,
         guestCookbooks,
         guestRecipes,
+        savedMealPlans, // Added
         setGuestRecipes,
         setSelectedCookbook,
         signIn,
@@ -921,6 +1045,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addRecipeToCookbook,
         sendPasswordResetEmail,
         syncGuestDataToUser,
+        saveMealPlan, // Added
+        loadMealPlans, // Added
+        deleteMealPlan, // Added
       }}
     >
       {children}
