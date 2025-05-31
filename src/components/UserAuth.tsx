@@ -62,13 +62,17 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange, onAuthSuccess }
         
         if (error) throw error;
         
+        // The checkUser in AppContext will handle fetching user data after sign-in
+        // No need to fetch user data here directly, AppContext handles it.
+        
+        // Fetch user data to get username for toast message
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('username, email')
           .eq('id', authData.user?.id)
           .single();
 
-        if (userError) {
+        if (userError || !userData) {
           console.error('Error fetching user data after sign-in:', userError);
           toast({
             title: 'Sign in successful, but profile data missing',
@@ -82,36 +86,8 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange, onAuthSuccess }
             description: 'Successfully signed in to MadRezipes.'
           });
         }
-      } else {
-        const { data, error } = await supabase.auth.signUp({
-          email: email.trim(),
-          password: password.trim(),
-          options: {
-            data: {
-              username: username.trim(),
-              security_question: securityQuestion,
-              security_answer: securityAnswer.trim()
-            }
-          }
-        });
-        
-        if (error) throw error;
-        
-        if (data.user) {
-          const { error: insertError } = await supabase
-            .from('users')
-            .insert({
-              id: data.user.id,
-              email: email.trim(),
-              username: username.trim(),
-              security_question: securityQuestion,
-              security_answer: securityAnswer.trim()
-            });
-          
-          if (insertError) {
-            console.error('Error inserting user data:', insertError);
-          }
-        }
+      } else { // isLogin is false, so it's signup
+        await signUp(email.trim(), password.trim(), username.trim(), securityQuestion, securityAnswer.trim());
         
         toast({
           title: '🎉 Account created!',
