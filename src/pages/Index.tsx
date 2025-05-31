@@ -114,18 +114,21 @@ const Index = () => {
               
               <TabsContent value="planner" className="space-y-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-6">
+                  <div className="space-y-6"> {/* Left Column */}
                     <RecipeScraper onRecipeAdded={handleRecipeAdded} />
                     <MealPlanner 
                       onMealPlanChange={handleMealPlanChange}
                       availableIngredients={availableIngredients}
                       onRecipeGenerated={handleRecipeAdded}
+                      selectedMonth={selectedMonth}
+                      setSelectedMonth={setSelectedMonth}
+                      allRecipes={recipes} // Pass all recipes for PDF generation fallback
                     />
                   </div>
                   
-                  <div className="space-y-6">
+                  <div className="space-y-6"> {/* Right Column */}
                     <ShoppingList 
-                      recipes={recipes} // Keep recipes prop for now, as it's used for non-meal-plan lists
+                      recipes={recipes} 
                       onShoppingListChange={handleShoppingListChange}
                       mealPlan={mealPlan}
                     />
@@ -133,14 +136,17 @@ const Index = () => {
                       mealPlan={mealPlan}
                       selectedMonth={selectedMonth}
                     />
-                    <MealExporter recipes={recipes} mealPlan={mealPlan} />
+                    <MealExporter 
+                      recipes={recipes} 
+                      mealPlan={mealPlan} 
+                      selectedMonth={selectedMonth}
+                    />
                   </div>
                 </div>
               </TabsContent>
               
               <TabsContent value="community">
-                {/* CommunityFunctions was removed as FriendsList now handles all friend management UI */}
-                <FriendsList onOpenDm={handleOpenDm} /> {/* Pass the DM handler */}
+                <FriendsList onOpenDm={handleOpenDm} />
               </TabsContent>
               
               <TabsContent value="recipes">

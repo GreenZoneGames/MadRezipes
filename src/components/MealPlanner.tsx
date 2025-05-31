@@ -2,12 +2,13 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shuffle, ChefHat, BookOpen, Loader2 } from 'lucide-react';
+import { Shuffle, ChefHat, BookOpen, Loader2, Download } from 'lucide-react'; // Import Download icon
 import { toast } from '@/components/ui/use-toast';
 import MealCalendar from './MealCalendar';
 import { useAppContext } from '@/contexts/AppContext'; // Import useAppContext
 import { useQuery } from '@tanstack/react-query'; // Import useQuery
 import { supabase } from '@/lib/supabase'; // Import supabase
+import { exportMealPlanToPDF } from '@/utils/pdf-export'; // Import the new utility
 
 interface Recipe {
   id: string;
@@ -31,15 +32,20 @@ interface MealPlannerProps {
   onMealPlanChange: (mealPlan: MealPlan[]) => void;
   availableIngredients: string[];
   onRecipeGenerated: (recipe: Recipe) => void;
+  selectedMonth: string; // Pass selectedMonth from Index.tsx
+  setSelectedMonth: (month: string) => void; // Pass setSelectedMonth from Index.tsx
+  allRecipes: Recipe[]; // Pass all recipes for PDF generation fallback
 }
 
 const MealPlanner: React.FC<MealPlannerProps> = ({ 
   onMealPlanChange, 
   availableIngredients, 
-  onRecipeGenerated 
+  onRecipeGenerated,
+  selectedMonth,
+  setSelectedMonth,
+  allRecipes // Receive allRecipes
 }) => {
   const { user, selectedCookbook, guestRecipes } = useAppContext(); // Get selectedCookbook and guestRecipes
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
   const [generatingRecipe, setGeneratingRecipe] = useState(false);
 
@@ -188,6 +194,22 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
     }
   };
 
+  const handleExportMealPlan = async () => {
+    try {
+      await exportMealPlanToPDF(mealPlan, selectedMonth, allRecipes);
+      toast({ 
+        title: 'Calendar PDF Exported', 
+        description: `Full month calendar with ${mealPlan.length} meals and shopping list downloaded!` 
+      });
+    } catch (error) {
+      toast({ 
+        title: 'Export Error', 
+        description: 'Failed to generate PDF. Please try again.', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
   const isLoadingRecipes = user && selectedCookbook?.user_id !== 'guest' ? isLoadingDbRecipes : false;
 
   return (
@@ -267,6 +289,18 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
                 )}
               </Button>
             </div>
+
+            {mealPlan.length > 0 && (
+              <div className="flex justify-center mt-4">
+                <Button 
+                  onClick={handleExportMealPlan}
+                  className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground hover-lift transition-all duration-300 shadow-lg"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Calendar PDF
+                </Button>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -4,13 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, Calendar, ShoppingCart } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { MealPlan as MealPlanType, Recipe } from './MealPlanner'; // Import MealPlanType and Recipe from MealPlanner
+import { exportMealPlanToPDF } from '@/utils/pdf-export'; // Import the new utility
 
 interface MealExporterProps {
   recipes: Recipe[];
   mealPlan: MealPlanType[];
+  selectedMonth: string; // Pass selectedMonth from Index.tsx
 }
 
-const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
+const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan, selectedMonth }) => {
   const getAllIngredients = () => {
     const ingredientMap = new Map<string, number>();
     mealPlan.forEach(meal => {
@@ -22,178 +24,12 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
     return Array.from(ingredientMap.entries()).map(([ingredient, count]) => ({ ingredient, count }));
   };
 
-  const generateFullMonthPlan = () => {
-    if (recipes.length === 0) return [];
-    
-    const currentDate = new Date();
-    const year = currentDate.getFullYear();
-    const month = currentDate.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    
-    const fullMonthPlan: MealPlanType[] = [];
-    const mealTypes: ('breakfast' | 'lunch' | 'dinner')[] = ['breakfast', 'lunch', 'dinner'];
-    
-    for (let day = 1; day <= daysInMonth; day++) {
-      mealTypes.forEach(mealType => {
-        const randomRecipe = recipes[Math.floor(Math.random() * recipes.length)];
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        fullMonthPlan.push({
-          date: dateStr,
-          recipe: randomRecipe,
-          mealType
-        });
-      });
-    }
-    
-    return fullMonthPlan;
-  };
-
-  const getMealIcon = (mealType: string) => {
-    switch (mealType.toLowerCase()) {
-      case 'breakfast': return '☀️';
-      case 'lunch': return '🍽️';
-      case 'dinner': return '🌙';
-      case 'appetizer': return '🍢'; // New icon for appetizer
-      case 'dessert': return '🍰'; // New icon for dessert
-      case 'snack': return '🥨'; // New icon for snack
-      default: return '🍽️';
-    }
-  };
-
-  const exportToPDF = async () => {
+  const handleExport = async () => {
     try {
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF('landscape', 'mm', 'a4');
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      
-      const fullMonthPlan = mealPlan.length > 0 ? mealPlan : generateFullMonthPlan();
-      
-      // Page 1: Calendar View
-      doc.setFillColor(41, 37, 36);
-      doc.rect(0, 0, pageWidth, pageHeight, 'F');
-      
-      // Title
-      doc.setTextColor(251, 146, 60);
-      doc.setFontSize(24);
-      doc.text('Monthly Meal Calendar', pageWidth/2, 20, { align: 'center' });
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      const currentDate = new Date();
-      const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      doc.text(`${monthName} - Generated: ${new Date().toLocaleDateString()}`, pageWidth/2, 30, { align: 'center' });
-      
-      // Calendar grid
-      const startY = 45;
-      const cellWidth = (pageWidth - 40) / 7;
-      const cellHeight = 25;
-      const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      
-      // Draw calendar header
-      doc.setFontSize(10);
-      doc.setTextColor(251, 146, 60);
-      daysOfWeek.forEach((day, index) => {
-        doc.text(day, 20 + (index * cellWidth) + cellWidth/2, startY, { align: 'center' });
-      });
-      
-      // Draw calendar grid and meals
-      doc.setTextColor(255, 255, 255);
-      
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      const firstDay = new Date(year, month, 1).getDay();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      
-      for (let week = 0; week < 6; week++) {
-        for (let day = 0; day < 7; day++) {
-          const dayNumber = week * 7 + day - firstDay + 1;
-          const x = 20 + day * cellWidth;
-          const y = startY + 5 + week * cellHeight;
-          
-          // Draw cell border
-          doc.setDrawColor(100, 100, 100);
-          doc.rect(x, y, cellWidth, cellHeight);
-          
-          if (dayNumber > 0 && dayNumber <= daysInMonth) {
-            doc.setFontSize(8);
-            doc.text(dayNumber.toString(), x + 2, y + 6);
-            
-            // Check for meals on this date
-            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
-            const dayMeals = fullMonthPlan.filter(m => m.date === dateStr);
-            
-            let mealY = y + 10;
-            const mealTypesForDisplay: ('breakfast' | 'lunch' | 'dinner')[] = ['breakfast', 'lunch', 'dinner'];
-
-            mealTypesForDisplay.forEach(type => {
-              const meal = dayMeals.find(m => m.mealType === type);
-              const icon = getMealIcon(type);
-              const mealTitle = meal ? (meal.recipe.title.length > 15 ? meal.recipe.title.substring(0, 15) + '...' : meal.recipe.title) : 'No meal';
-              const textColor = meal ? [134, 239, 172] : [150, 150, 150]; // Green for planned, gray for none
-
-              if (mealY < y + cellHeight - 2) { // Check if space is available
-                doc.setFontSize(7); // Increased font size for readability
-                doc.setTextColor(...textColor);
-                doc.text(`${icon} ${mealTitle}`, x + 1, mealY);
-                mealY += 4; // Increment Y for next meal type
-              }
-            });
-            doc.setTextColor(255, 255, 255); // Reset color
-          }
-        }
-      }
-      
-      // Legend
-      doc.setFontSize(8);
-      doc.setTextColor(251, 146, 60);
-      doc.text('Meal Icons:', 20, pageHeight - 15);
-      doc.setTextColor(255, 255, 255);
-      doc.text('☀️ Breakfast  🍽️ Lunch  🌙 Dinner', 20, pageHeight - 10);
-      
-      // Page 2: Shopping List
-      doc.addPage();
-      doc.setFillColor(41, 37, 36);
-      doc.rect(0, 0, pageWidth, pageHeight, 'F');
-      
-      doc.setTextColor(251, 146, 60);
-      doc.setFontSize(24);
-      doc.text('Shopping List', pageWidth/2, 20, { align: 'center' });
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(12);
-      doc.text('Combined ingredients for all planned meals', pageWidth/2, 30, { align: 'center' });
-      
-      const ingredients = getAllIngredients();
-      let yPos = 45;
-      let xPos = 20;
-      const columnWidth = (pageWidth - 40) / 2;
-      
-      doc.setFontSize(10);
-      ingredients.forEach((item, index) => {
-        if (yPos > pageHeight - 20) {
-          yPos = 45;
-          xPos += columnWidth;
-          if (xPos > pageWidth - columnWidth) {
-            doc.addPage();
-            doc.setFillColor(41, 37, 36);
-            doc.rect(0, 0, pageWidth, pageHeight, 'F');
-            yPos = 20;
-            xPos = 20;
-          }
-        }
-        
-        doc.setTextColor(134, 239, 172);
-        doc.text('•', xPos, yPos);
-        doc.setTextColor(255, 255, 255);
-        doc.text(`${item.ingredient}${item.count > 1 ? ` (${item.count}x)` : ''}`, xPos + 5, yPos);
-        yPos += 6;
-      });
-      
-      doc.save(`meal-calendar-${monthName.replace(' ', '-')}.pdf`);
+      await exportMealPlanToPDF(mealPlan, selectedMonth, recipes);
       toast({ 
         title: 'Calendar PDF Exported', 
-        description: `Full month calendar with ${fullMonthPlan.length} meals and shopping list downloaded!` 
+        description: `Full month calendar with ${mealPlan.length} meals and shopping list downloaded!` 
       });
     } catch (error) {
       toast({ 
@@ -215,8 +51,8 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
       <CardContent>
         <div className="space-y-4">
           <Button 
-            onClick={exportToPDF}
-            disabled={recipes.length === 0}
+            onClick={handleExport}
+            disabled={mealPlan.length === 0} // Disable if no meal plan is generated
             className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground hover-lift transition-all duration-300 shadow-lg"
           >
             <Calendar className="h-4 w-4 mr-2" />
@@ -238,7 +74,7 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
               <span>Combined shopping list for all ingredients</span>
             </div>
             <p className="text-xs pt-2 text-center">
-              {mealPlan.length > 0 ? `${mealPlan.length} planned meals` : 'Auto-generates full month plan'} • {getAllIngredients().length} unique ingredients
+              {mealPlan.length > 0 ? `${mealPlan.length} planned meals` : 'Generate a plan first'} • {getAllIngredients().length} unique ingredients
             </p>
           </div>
         </div>
