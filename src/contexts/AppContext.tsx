@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from '@/lib/supabase';
 import { useQueryClient } from '@tanstack/react-query';
 import { v4 as uuidv4 } from 'uuid';
+import { toast } from '@/components/ui/use-toast'; // Import toast for notifications
 
 interface User {
   id: string;
@@ -406,16 +407,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addRecipeToCookbook = async (recipe: Recipe, cookbookId: string) => {
     if (!user) {
       // Guest mode: add to local storage
+      const isDuplicate = guestRecipes.some(
+        (r) => r.cookbook_id === cookbookId && r.title === recipe.title && r.url === recipe.url
+      );
+
+      if (isDuplicate) {
+        toast({
+          title: 'Duplicate Recipe',
+          description: `"${recipe.title}" is already in this cookbook.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const newGuestRecipe: Recipe = {
         ...recipe,
         id: recipe.id || uuidv4(), // Ensure recipe has an ID
         cookbook_id: cookbookId,
       };
       setGuestRecipes(prev => [...prev, newGuestRecipe]);
+      toast({
+        title: 'Recipe Added!',
+        description: `${recipe.title} has been added to your temporary cookbook. Sign in to save it permanently!`,
+      });
       return;
     }
     
     try {
+      // Check for duplicate in Supabase
+      const { data: existingRecipes, error: fetchError } = await supabase
+        .from('recipes')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('cookbook_id', cookbookId)
+        .eq('title', recipe.title)
+        .eq('url', recipe.url);
+
+      if (fetchError) throw fetchError;
+
+      if (existingRecipes && existingRecipes.length > 0) {
+        toast({
+          title: 'Duplicate Recipe',
+          description: `"${recipe.title}" is already in this cookbook.`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('recipes')
         .insert({
@@ -436,6 +474,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       if (error) throw error;
       console.log('Recipe added to cookbook:', data);
+      toast({
+        title: 'Recipe Added!',
+        description: `${recipe.title} has been added to your cookbook.`,
+      });
     } catch (error) {
       console.error('Error adding recipe to cookbook:', error);
       throw error;
