@@ -157,6 +157,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       if (error) throw error;
       setCookbooks(data || []);
+      // Automatically select the first cookbook if none is selected
+      if (!selectedCookbook && data && data.length > 0) {
+        setSelectedCookbook(data[0]);
+      }
     } catch (error) {
       console.error('Load cookbooks error:', error);
     }
@@ -346,7 +350,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // If there's an error checking user, assume logged out state
       setUser(null);
     }
-  }, [guestCookbooks, guestRecipes, syncGuestDataToUser]);
+  }, [guestCookbooks, guestRecipes, syncGuestDataToUser, selectedCookbook]); // Added selectedCookbook to dependencies
 
   useEffect(() => {
     checkUser();
@@ -598,7 +602,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const { data: existingCookbook, error: fetchError } = await supabase
           .from('cookbooks')
           .select('id')
-          .eq('user_id', user.id)
+          .eq('user.id', user.id) // Corrected to user.id
           .ilike('name', finalNewName)
           .single();
 
