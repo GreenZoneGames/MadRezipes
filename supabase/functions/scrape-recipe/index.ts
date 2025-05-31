@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.43-alpha/deno-dom-wasm.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -26,11 +27,11 @@ serve(async (req) => {
     }
 
     const html = await response.text();
+    const recipes = [];
 
-    // Attempt to find JSON-LD script tags
+    // --- Attempt 1: Parse JSON-LD (preferred) ---
     const jsonLdRegex = /<script type="application\/ld\+json">(.*?)<\/script>/gs;
     let match;
-    const recipes = [];
 
     while ((match = jsonLdRegex.exec(html)) !== null) {
       try {
@@ -55,7 +56,6 @@ serve(async (req) => {
               };
               recipes.push(recipe);
             }
-            // Recursively check nested objects/arrays for recipes
             for (const key in data) {
               if (Object.prototype.hasOwnProperty.call(data, key)) {
                 processJson(data[key]);
@@ -69,8 +69,44 @@ serve(async (req) => {
       }
     }
 
+    // --- Attempt 2: Fallback to HTML parsing if no JSON-LD recipe found ---
     if (recipes.length === 0) {
-      return new Response(JSON.stringify({ recipes: [], message: 'No JSON-LD recipe data found.' }), {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      if (doc) {
+        const titleElement = doc.querySelector('h1.entry-title, h1.recipe-title, .wprm-recipe-name');
+        const title = titleElement?.textContent?.trim() || 'Untitled Recipe (HTML Scrape)';
+
+        const ingredientsList = doc.querySelector('.wprm-recipe-ingredients, .tasty-recipes-ingredients, .recipe-ingredients, .ingredients');
+        const ingredients = Array.from(ingredientsList?.querySelectorAll('li, .wprm-recipe-ingredient') || [])
+          .map(li => li.textContent?.trim())
+          .filter(Boolean);
+
+        const instructionsList = doc.querySelector('.wprm-recipe-instructions, .tasty-recipes-instructions, .recipe-instructions, .instructions');
+        const instructions = Array.from(instructionsList?.querySelectorAll('li, .wprm-recipe-instruction') || [])
+          .map(li => li.textContent?.trim())
+          .filter(Boolean);
+
+        const imageElement = doc.querySelector('img.wp-post-image, .wprm-recipe-image img, .tasty-recipes-image img');
+        const image = imageElement?.getAttribute('src') || null;
+
+        if (ingredients.length > 0 || instructions.length > 0) {
+          recipes.push({
+            id: `html-scrape-${Date.now()}`,
+            title,
+            ingredients,
+            instructions,
+            url,
+            image,
+            cookTime: null,
+            servings: null,
+            mealType: null,
+          });
+        }
+      }
+    }
+
+    if (recipes.length === 0) {
+      return new Response(JSON.stringify({ recipes: [], message: 'No structured recipe data found (JSON-LD or common HTML patterns).' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       });
