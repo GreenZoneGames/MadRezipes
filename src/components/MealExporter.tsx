@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Calendar, ShoppingCart, Coffee, Utensils, Moon } from 'lucide-react';
+import { Download, Calendar, ShoppingCart } from 'lucide-react'; // Removed Coffee, Utensils, Moon
 import { toast } from '@/components/ui/use-toast';
 
 interface Recipe {
@@ -234,17 +234,14 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
             Export Full Month Calendar PDF
           </Button>
           
-          <div className="text-sm text-muted-foreground space-y-1">
+          <div className="text-sm text-muted-foreground space-y-1 text-center"> {/* Added text-center here */}
             <div className="flex items-center justify-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />
               <span>Full month calendar with meal titles and icons</span>
             </div>
-            <div className="flex items-center justify-center gap-2">
-              <Coffee className="h-4 w-4 text-orange-500" />
+            <div className="flex items-center justify-center gap-2"> {/* This div already has justify-center */}
               <span>☀️ Breakfast</span>
-              <Utensils className="h-4 w-4 text-blue-500" />
               <span>🍽️ Lunch</span>
-              <Moon className="h-4 w-4 text-purple-500" />
               <span>🌙 Dinner</span>
             </div>
             <div className="flex items-center justify-center gap-2">
