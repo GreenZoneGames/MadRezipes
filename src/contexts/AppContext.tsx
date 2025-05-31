@@ -8,6 +8,9 @@ interface User {
   id: string;
   email: string;
   username?: string;
+  avatar_url?: string; // New
+  bio?: string; // New
+  favorite_recipe_id?: string; // New
 }
 
 interface Cookbook {
@@ -15,6 +18,7 @@ interface Cookbook {
   name: string;
   description?: string;
   user_id: string;
+  is_public: boolean; // New
 }
 
 interface Friend {
@@ -62,9 +66,11 @@ interface AppContextType {
   setGuestRecipes: React.Dispatch<React.SetStateAction<Recipe[]>>; // Added to default context
   setSelectedCookbook: (cookbook: Cookbook | null) => void;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, username?: string, securityQuestion?: string, securityAnswer?: string) => Promise<void>;
+  signUp: (email: string, password: string, username?: string, securityQuestion?: string, securityAnswer?: string, avatarUrl?: string, bio?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  createCookbook: (name: string, description?: string) => Promise<Cookbook | null>;
+  createCookbook: (name: string, description?: string, isPublic?: boolean) => Promise<Cookbook | null>;
+  updateUserProfile: (updates: Partial<User>) => Promise<void>; // New
+  updateCookbookPrivacy: (cookbookId: string, isPublic: boolean) => Promise<void>; // New
   addFriend: (email: string) => Promise<void>;
   removeFriend: (friendId: string) => Promise<void>;
   acceptFriendRequest: (requestId: string, friendUserId: string) => Promise<void>; // New function
@@ -89,6 +95,8 @@ const defaultAppContext: AppContextType = {
   signUp: async () => {},
   signOut: async () => {},
   createCookbook: async () => null,
+  updateUserProfile: async () => {}, // Dummy
+  updateCookbookPrivacy: async () => {}, // Dummy
   addFriend: async () => {},
   removeFriend: async () => {},
   acceptFriendRequest: async () => {}, // Dummy function
@@ -203,7 +211,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       for (const guestCb of guestCookbooks) {
         const { data: newCb, error: cbError } = await supabase
           .from('cookbooks')
-          .insert({ name: guestCb.name, description: guestCb.description, user_id: user.id })
+          .insert({ name: guestCb.name, description: guestCb.description, user_id: user.id, is_public: guestCb.is_public }) // Include is_public
           .select()
           .single();
         
@@ -267,7 +275,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (session?.user) {
         const { data: userData, error: fetchUserError } = await supabase
           .from('users')
-          .select('*')
+          .select('*, favorite_recipe:recipes(id, title)') // Select favorite recipe details
           .eq('id', session.user.id) // Use ID for direct lookup
           .single();
         
@@ -280,6 +288,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               id: session.user.id,
               email: session.user.email,
               username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || null,
+              avatar_url: session.user.user_metadata?.avatar_url || null, // Include new fields
+              bio: session.user.user_metadata?.bio || null, // Include new fields
             });
 
           if (insertProfileError) {
@@ -292,7 +302,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             // Profile successfully created, now fetch it to set the user state
             const { data: newUserData, error: fetchNewUserError } = await supabase
               .from('users')
-              .select('*')
+              .select('*, favorite_recipe:recipes(id, title)')
               .eq('id', session.user.id)
               .single();
 
@@ -358,26 +368,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const signUp = async (email: string, password: string, username?: string, securityQuestion?: string, securityAnswer?: string) => {
+  const signUp = async (email: string, password: string, username?: string, securityQuestion?: string, securityAnswer?: string, avatarUrl?: string, bio?: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            username,
+            security_question: securityQuestion,
+            security_answer: securityAnswer,
+            avatar_url: avatarUrl,
+            bio: bio,
+          }
+        }
+      });
       if (error) throw error;
       
       if (data.user) {
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            email: email.trim(),
-            username: username?.trim(),
-            security_question: securityQuestion,
-            security_answer: securityAnswer?.trim()
-          });
-        
-        if (insertError) {
-          console.error('Error inserting user data:', insertError);
-          throw insertError; // Explicitly throw error if profile insert fails
-        }
+        // The handle_new_user trigger should now automatically insert into public.users
+        // with the user_metadata. No need for explicit insert here.
       }
       // checkUser will handle setting user and syncing data
     } catch (error) {
@@ -400,7 +410,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const createCookbook = async (name: string, description?: string): Promise<Cookbook | null> => {
+  const createCookbook = async (name: string, description?: string, isPublic: boolean = false): Promise<Cookbook | null> => {
     if (!user) {
       // Guest mode: create in local storage
       const newGuestCookbook: Cookbook = {
@@ -408,6 +418,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         name,
         description,
         user_id: 'guest', // Placeholder for guest user
+        is_public: isPublic, // Include is_public for guest cookbooks
       };
       setGuestCookbooks(prev => [...prev, newGuestCookbook]);
       return newGuestCookbook;
@@ -416,7 +427,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const { data, error } = await supabase
         .from('cookbooks')
-        .insert({ name, description, user_id: user.id })
+        .insert({ name, description, user_id: user.id, is_public: isPublic })
         .select()
         .single();
       
@@ -425,6 +436,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return data;
     } catch (error) {
       console.error('Create cookbook error:', error);
+      throw error;
+    }
+  };
+
+  const updateUserProfile = async (updates: Partial<User>) => {
+    if (!user) throw new Error('User not logged in.');
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update(updates)
+        .eq('id', user.id)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      setUser(data); // Update local user state
+      queryClient.invalidateQueries({ queryKey: ['user', user.id] }); // Invalidate user query
+    } catch (error) {
+      console.error('Update user profile error:', error);
+      throw error;
+    }
+  };
+
+  const updateCookbookPrivacy = async (cookbookId: string, isPublic: boolean) => {
+    if (!user) throw new Error('User not logged in.');
+    try {
+      const { data, error } = await supabase
+        .from('cookbooks')
+        .update({ is_public: isPublic })
+        .eq('id', cookbookId)
+        .eq('user_id', user.id) // Ensure user owns the cookbook
+        .select()
+        .single();
+      
+      if (error) throw error;
+      setCookbooks(prev => prev.map(cb => cb.id === cookbookId ? data : cb)); // Update local state
+      queryClient.invalidateQueries({ queryKey: ['cookbooks', user.id] }); // Invalidate cookbooks query
+    } catch (error) {
+      console.error('Update cookbook privacy error:', error);
       throw error;
     }
   };
@@ -659,6 +709,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         signUp,
         signOut,
         createCookbook,
+        updateUserProfile, // Added
+        updateCookbookPrivacy, // Added
         addFriend,
         removeFriend,
         acceptFriendRequest,

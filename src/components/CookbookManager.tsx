@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BookOpen, Plus, Trash2, Edit, Loader2, Save } from 'lucide-react';
+import { Switch } from '@/components/ui/switch'; // Import Switch
+import { Label } from '@/components/ui/label'; // Import Label
+import { BookOpen, Plus, Trash2, Edit, Loader2, Save, Globe, Lock } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +14,7 @@ import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import UserAuth from './UserAuth'; // Import UserAuth for login prompt
 import RecipeCard from './RecipeCard'; // Import RecipeCard to display details
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea for cookbook description
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -37,20 +40,34 @@ interface Recipe {
   categorized_ingredients?: CategorizedIngredients; // Matches DB column name
 }
 
+interface Cookbook {
+  id: string;
+  name: string;
+  description?: string;
+  user_id: string;
+  is_public: boolean; // New
+}
+
 interface CookbookManagerProps {
   onRecipeRemoved: (id: string) => void; // Still needed for local state sync in AppLayout
 }
 
 const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) => {
-  const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser } = useAppContext();
+  const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy } = useAppContext();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newCookbookName, setNewCookbookName] = useState('');
   const [newCookbookDescription, setNewCookbookDescription] = useState('');
+  const [newCookbookIsPublic, setNewCookbookIsPublic] = useState(false); // New state for public/private
   const [loading, setLoading] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false); // State for auth dialog
   const [showRecipeDetailsDialog, setShowRecipeDetailsDialog] = useState(false); // State for recipe details dialog
   const [selectedRecipeForDetails, setSelectedRecipeForDetails] = useState<Recipe | null>(null); // State for selected recipe
-  const queryClient = useQueryClient();
+  const [showEditCookbookDialog, setShowEditCookbookDialog] = useState(false); // State for editing cookbook
+  const [editingCookbook, setEditingCookbook] = useState<Cookbook | null>(null); // Cookbook being edited
+  const [editingCookbookName, setEditingCookbookName] = useState('');
+  const [editingCookbookDescription, setEditingCookbookDescription] = useState('');
+  const [editingCookbookIsPublic, setEditingCookbookIsPublic] = useState(false);
+  const [isUpdatingCookbook, setIsUpdatingCookbook] = useState(false);
 
   const currentCookbooks = user ? cookbooks : guestCookbooks;
   const currentSelectedCookbook = selectedCookbook || (guestCookbooks.length > 0 ? guestCookbooks[0] : null);
@@ -88,9 +105,10 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
 
     setLoading(true);
     try {
-      const newCb = await createCookbook(newCookbookName.trim(), newCookbookDescription.trim());
+      const newCb = await createCookbook(newCookbookName.trim(), newCookbookDescription.trim(), newCookbookIsPublic);
       setNewCookbookName('');
       setNewCookbookDescription('');
+      setNewCookbookIsPublic(false);
       setShowCreateDialog(false);
       toast({
         title: '📚 Cookbook Created!',
@@ -98,9 +116,6 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
       });
       if (newCb) {
         setSelectedCookbook(newCb); // Automatically select the newly created cookbook
-      }
-      if (user) {
-        queryClient.invalidateQueries({ queryKey: ['cookbooks', user.id] }); // Invalidate cookbooks query for logged-in user
       }
     } catch (error: any) {
       toast({
@@ -110,6 +125,58 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleEditCookbook = (cookbook: Cookbook) => {
+    setEditingCookbook(cookbook);
+    setEditingCookbookName(cookbook.name);
+    setEditingCookbookDescription(cookbook.description || '');
+    setEditingCookbookIsPublic(cookbook.is_public);
+    setShowEditCookbookDialog(true);
+  };
+
+  const handleUpdateCookbook = async () => {
+    if (!editingCookbook || !user) return;
+    if (!editingCookbookName.trim()) {
+      toast({
+        title: 'Name Required',
+        description: 'Please enter a cookbook name.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsUpdatingCookbook(true);
+    try {
+      const { error } = await supabase
+        .from('cookbooks')
+        .update({ 
+          name: editingCookbookName.trim(), 
+          description: editingCookbookDescription.trim(),
+          is_public: editingCookbookIsPublic
+        })
+        .eq('id', editingCookbook.id)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+
+      toast({
+        title: 'Cookbook Updated!',
+        description: `"${editingCookbookName}" has been updated.`
+      });
+      setShowEditCookbookDialog(false);
+      setEditingCookbook(null);
+      // Invalidate queries to refetch updated cookbooks
+      queryClient.invalidateQueries({ queryKey: ['cookbooks', user.id] });
+    } catch (error: any) {
+      toast({
+        title: 'Update Failed',
+        description: error.message || 'Failed to update cookbook.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsUpdatingCookbook(false);
     }
   };
 
@@ -201,12 +268,32 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
                     onChange={(e) => setNewCookbookName(e.target.value)}
                     disabled={loading}
                   />
-                  <Input
+                  <Textarea
                     placeholder="Description (optional)"
                     value={newCookbookDescription}
                     onChange={(e) => setNewCookbookDescription(e.target.value)}
                     disabled={loading}
+                    rows={3}
                   />
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="new-cookbook-public"
+                      checked={newCookbookIsPublic}
+                      onCheckedChange={setNewCookbookIsPublic}
+                      disabled={loading}
+                    />
+                    <Label htmlFor="new-cookbook-public">
+                      {newCookbookIsPublic ? (
+                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Globe className="h-4 w-4" /> Public
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Lock className="h-4 w-4" /> Private
+                        </span>
+                      )}
+                    </Label>
+                  </div>
                   <Button onClick={handleCreateCookbook} disabled={loading} className="w-full">
                     {loading ? 'Creating...' : 'Create Cookbook'}
                   </Button>
@@ -246,10 +333,26 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
           {currentSelectedCookbook && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h4 className="font-medium">{currentSelectedCookbook.name}</h4>
-                <Badge variant="secondary">
-                  {recipesToDisplay?.length || 0} recipes
-                </Badge>
+                <h4 className="font-medium flex items-center gap-2">
+                  {currentSelectedCookbook.name}
+                  <Badge variant="secondary" className="text-xs">
+                    {currentSelectedCookbook.is_public ? (
+                      <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> Public</span>
+                    ) : (
+                      <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private</span>
+                    )}
+                  </Badge>
+                </h4>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">
+                    {recipesToDisplay?.length || 0} recipes
+                  </Badge>
+                  {user && currentSelectedCookbook.user_id !== 'guest' && (
+                    <Button variant="ghost" size="sm" onClick={() => handleEditCookbook(currentSelectedCookbook)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </div>
               {currentSelectedCookbook.description && (
                 <p className="text-sm text-muted-foreground">
@@ -308,6 +411,54 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
               // Pass onAddToShoppingList if needed, or remove if not applicable in this context
               // onAddToShoppingList={onAddToShoppingList} 
             />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Cookbook Dialog */}
+      <Dialog open={showEditCookbookDialog} onOpenChange={setShowEditCookbookDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Cookbook</DialogTitle>
+          </DialogHeader>
+          {editingCookbook && (
+            <div className="space-y-4">
+              <Input
+                placeholder="Cookbook name"
+                value={editingCookbookName}
+                onChange={(e) => setEditingCookbookName(e.target.value)}
+                disabled={isUpdatingCookbook}
+              />
+              <Textarea
+                placeholder="Description (optional)"
+                value={editingCookbookDescription}
+                onChange={(e) => setEditingCookbookDescription(e.target.value)}
+                disabled={isUpdatingCookbook}
+                rows={3}
+              />
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="edit-cookbook-public"
+                  checked={editingCookbookIsPublic}
+                  onCheckedChange={setEditingCookbookIsPublic}
+                  disabled={isUpdatingCookbook}
+                />
+                <Label htmlFor="edit-cookbook-public">
+                  {editingCookbookIsPublic ? (
+                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Globe className="h-4 w-4" /> Public
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <Lock className="h-4 w-4" /> Private
+                    </span>
+                  )}
+                </Label>
+              </div>
+              <Button onClick={handleUpdateCookbook} disabled={isUpdatingCookbook} className="w-full">
+                {isUpdatingCookbook ? 'Updating...' : 'Save Changes'}
+              </Button>
+            </div>
           )}
         </DialogContent>
       </Dialog>
