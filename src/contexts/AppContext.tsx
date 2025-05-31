@@ -59,7 +59,8 @@ interface AppContextType {
   addFriend: (email: string) => Promise<void>;
   removeFriend: (friendId: string) => Promise<void>;
   shareRecipe: (recipeId: string, friendId: string) => Promise<void>;
-  addRecipeToCookbook: (recipe: Recipe, cookbookId: string) => Promise<void>; // New function
+  addRecipeToCookbook: (recipe: Recipe, cookbookId: string) => Promise<void>;
+  sendPasswordResetEmail: (email: string) => Promise<void>; // New function
 }
 
 const defaultAppContext: AppContextType = {
@@ -77,7 +78,8 @@ const defaultAppContext: AppContextType = {
   addFriend: async () => {},
   removeFriend: async () => {},
   shareRecipe: async () => {},
-  addRecipeToCookbook: async () => {}, // Default for new function
+  addRecipeToCookbook: async () => {},
+  sendPasswordResetEmail: async () => {}, // Default for new function
 };
 
 const AppContext = createContext<AppContextType>(defaultAppContext);
@@ -307,6 +309,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const sendPasswordResetEmail = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+    } catch (error) {
+      console.error('Password reset email error:', error);
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -325,6 +337,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         removeFriend,
         shareRecipe,
         addRecipeToCookbook,
+        sendPasswordResetEmail,
       }}
     >
       {children}

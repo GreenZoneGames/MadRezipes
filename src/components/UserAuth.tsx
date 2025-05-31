@@ -22,7 +22,7 @@ const securityQuestions = [
 ];
 
 const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
-  const { signIn, signUp } = useAppContext();
+  const { signIn, signUp, sendPasswordResetEmail } = useAppContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -81,6 +81,9 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
         if (error) throw error;
         
         if (data.user) {
+          // Note: Supabase automatically handles profile creation if you set up the trigger.
+          // The 'users' table insertion here might be redundant if a trigger is used.
+          // Keeping it for now as per existing code, but be aware of potential duplicates.
           const { error: insertError } = await supabase
             .from('users')
             .insert({
@@ -98,7 +101,7 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
         
         toast({
           title: '🎉 Account created!',
-          description: 'Welcome to MadRezipes! Start building your recipe collection.'
+          description: 'Welcome to MadRezipes! Please check your email to verify your account.'
         });
       }
       resetForm();
@@ -115,18 +118,50 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
     }
   };
 
+  const handlePasswordReset = async () => {
+    if (!email.trim()) {
+      toast({
+        title: 'Email Required',
+        description: 'Please enter your email address to reset your password.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await sendPasswordResetEmail(email.trim());
+      toast({
+        title: 'Password Reset Email Sent',
+        description: 'Please check your email for a password reset link.',
+      });
+      resetForm();
+      setShowPasswordReset(false);
+      onOpenChange(false);
+    } catch (error: any) {
+      toast({
+        title: 'Password Reset Failed',
+        description: error.message || 'Failed to send reset email. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setEmail('');
     setPassword('');
     setUsername('');
     setSecurityQuestion('');
     setSecurityAnswer('');
-    setShowPasswordReset(false);
+    // showPasswordReset state is managed by its own button
   };
 
   const switchMode = () => {
     setIsLogin(!isLogin);
     resetForm();
+    setShowPasswordReset(false); // Ensure reset form is hidden when switching modes
   };
 
   return (
@@ -227,7 +262,7 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
         ) : (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Enter your email and answer your security question to reset your password.
+              Enter your email to receive a password reset link.
             </p>
             
             <Input
@@ -238,51 +273,20 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
               disabled={loading}
             />
             
-            <Select value={securityQuestion} onValueChange={setSecurityQuestion} disabled={loading}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select your security question" />
-              </SelectTrigger>
-              <SelectContent>
-                {securityQuestions.map((question, index) => (
-                  <SelectItem key={index} value={question}>
-                    {question}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Input
-              type="text"
-              placeholder="Security answer"
-              value={securityAnswer}
-              onChange={(e) => setSecurityAnswer(e.target.value)}
-              disabled={loading}
-            />
-            
-            <Input
-              type="password"
-              placeholder="New password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={loading}
-            />
-            
             <Button 
-              onClick={() => {
-                toast({
-                  title: '🔒 Password Reset',
-                  description: 'Password reset functionality will be implemented with backend integration.'
-                });
-              }}
+              onClick={handlePasswordReset}
               className="w-full" 
-              disabled={loading}
+              disabled={loading || !email.trim()}
             >
-              Reset Password
+              {loading ? 'Sending...' : 'Send Reset Link'}
             </Button>
             
             <Button
               variant="ghost"
-              onClick={() => setShowPasswordReset(false)}
+              onClick={() => {
+                setShowPasswordReset(false);
+                resetForm(); // Clear email field when going back
+              }}
               className="w-full"
               disabled={loading}
             >
