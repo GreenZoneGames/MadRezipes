@@ -135,9 +135,9 @@ const QuickShareRecipe: React.FC<QuickShareRecipeProps> = ({ recipe, children })
         </DialogHeader>
         
         <div className="space-y-4">
-          <div className="p-3 bg-orange-50 rounded-lg border">
-            <h4 className="font-semibold text-sm">{recipe.title}</h4>
-            <p className="text-xs text-muted-foreground">
+          <div className="p-3 bg-card rounded-lg border border-border"> {/* Changed bg-orange-50 to bg-card and added border-border */}
+            <h4 className="font-semibold text-sm text-foreground">{recipe.title}</h4> {/* Ensured text is foreground color */}
+            <p className="text-xs text-muted-foreground mt-1">
               {recipe.ingredients.length} ingredients • {recipe.instructions.length} steps
             </p>
           </div>
