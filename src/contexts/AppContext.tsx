@@ -19,7 +19,9 @@ interface Cookbook {
 
 interface Friend {
   id: string;
-  email: string;
+  user_id: string; // The ID of the user who sent/received the request
+  friend_id: string; // The ID of the friend (the other user)
+  email: string; // The email of the friend (for display)
   status: 'pending' | 'accepted';
 }
 
@@ -64,6 +66,8 @@ interface AppContextType {
   createCookbook: (name: string, description?: string) => Promise<Cookbook | null>;
   addFriend: (email: string) => Promise<void>;
   removeFriend: (friendId: string) => Promise<void>;
+  acceptFriendRequest: (requestId: string, friendUserId: string) => Promise<void>; // New function
+  rejectFriendRequest: (requestId: string) => Promise<void>; // New function
   addRecipeToCookbook: (recipe: Recipe, cookbookId: string) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   syncGuestDataToUser: () => Promise<void>; // New function to sync guest data
@@ -86,6 +90,8 @@ const defaultAppContext: AppContextType = {
   createCookbook: async () => null,
   addFriend: async () => {},
   removeFriend: async () => {},
+  acceptFriendRequest: async () => {}, // Dummy function
+  rejectFriendRequest: async () => {}, // Dummy function
   addRecipeToCookbook: async () => {},
   sendPasswordResetEmail: async () => {},
   syncGuestDataToUser: async () => {},
@@ -147,11 +153,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const { data, error } = await supabase
         .from('friends')
-        .select('*')
-        .eq('user_id', userId);
+        .select(`
+          id,
+          user_id,
+          friend_id,
+          status,
+          users!friends_friend_id_fkey (
+            email
+          )
+        `)
+        .or(`user_id.eq.${userId},friend_id.eq.${userId}`); // Fetch requests where current user is sender or recipient
       
       if (error) throw error;
-      setFriends(data || []);
+
+      const formattedFriends: Friend[] = (data || []).map((item: any) => {
+        const isSender = item.user_id === userId;
+        const friendEmail = isSender ? item.users.email : item.email; // Use item.email for recipient's email
+        
+        return {
+          id: item.id,
+          user_id: item.user_id,
+          friend_id: item.friend_id,
+          email: item.users.email, // This will be the email of the 'friend_id' user
+          status: item.status,
+        };
+      });
+      
+      setFriends(formattedFriends);
     } catch (error) {
       console.error('Load friends error:', error);
     }
@@ -355,36 +383,124 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addFriend = async (email: string) => {
-    if (!user) return; // Friends always require a user
+    if (!user) {
+      throw new Error('You must be logged in to send friend requests.');
+    }
+
+    // First, find the recipient's user ID
+    const { data: recipientUser, error: recipientError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .single();
+
+    if (recipientError || !recipientUser) {
+      throw new Error('User with this email not found.');
+    }
+
+    if (recipientUser.id === user.id) {
+      throw new Error('You cannot send a friend request to yourself.');
+    }
+
+    // Check if a request already exists (either way)
+    const { data: existingRequest, error: existingError } = await supabase
+      .from('friends')
+      .select('*')
+      .or(`and(user_id.eq.${user.id},friend_id.eq.${recipientUser.id}),and(user_id.eq.${recipientUser.id},friend_id.eq.${user.id})`);
+
+    if (existingError) throw existingError;
+
+    if (existingRequest && existingRequest.length > 0) {
+      if (existingRequest[0].status === 'pending') {
+        throw new Error('Friend request already pending.');
+      } else if (existingRequest[0].status === 'accepted') {
+        throw new Error('You are already friends with this user.');
+      }
+    }
     
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('friends')
-        .insert({ user_id: user.id, email, status: 'pending' })
-        .select()
-        .single();
+        .insert({ user_id: user.id, friend_id: recipientUser.id, status: 'pending' });
       
       if (error) throw error;
-      setFriends(prev => [...prev, data]);
+      // Reload friends list to show the new pending request
+      await loadFriends(user.id);
     } catch (error) {
       console.error('Add friend error:', error);
       throw error;
     }
   };
 
-  const removeFriend = async (friendId: string) => {
-    if (!user) return; // Friends always require a user
+  const removeFriend = async (friendshipId: string) => {
+    if (!user) return; 
     try {
       const { error } = await supabase
         .from('friends')
         .delete()
-        .eq('id', friendId)
-        .eq('user_id', user.id); // Ensure user owns the friend relationship
+        .eq('id', friendshipId)
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`); // Ensure current user is part of the friendship
       
       if (error) throw error;
-      setFriends(prev => prev.filter(f => f.id !== friendId));
+      await loadFriends(user.id); // Reload friends list
     } catch (error) {
       console.error('Remove friend error:', error);
+      throw error;
+    }
+  };
+
+  const acceptFriendRequest = async (requestId: string, friendUserId: string) => {
+    if (!user) return;
+    try {
+      // Update the status of the existing request to 'accepted'
+      const { error: updateError } = await supabase
+        .from('friends')
+        .update({ status: 'accepted' })
+        .eq('id', requestId)
+        .eq('friend_id', user.id); // Ensure current user is the recipient of this request
+
+      if (updateError) throw updateError;
+
+      // Create a reciprocal entry for the other user if it doesn't exist
+      // This ensures both sides of the relationship are recorded as 'accepted'
+      const { data: existingReciprocal, error: reciprocalCheckError } = await supabase
+        .from('friends')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('friend_id', friendUserId)
+        .single();
+
+      if (reciprocalCheckError && reciprocalCheckError.code !== 'PGRST116') { // PGRST116 means no rows found
+        throw reciprocalCheckError;
+      }
+
+      if (!existingReciprocal) {
+        const { error: insertError } = await supabase
+          .from('friends')
+          .insert({ user_id: user.id, friend_id: friendUserId, status: 'accepted' });
+        if (insertError) throw insertError;
+      }
+      
+      await loadFriends(user.id); // Reload friends list
+    } catch (error) {
+      console.error('Accept friend request error:', error);
+      throw error;
+    }
+  };
+
+  const rejectFriendRequest = async (requestId: string) => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('friends')
+        .delete()
+        .eq('id', requestId)
+        .eq('friend_id', user.id); // Ensure current user is the recipient of this request
+      
+      if (error) throw error;
+      await loadFriends(user.id); // Reload friends list
+    } catch (error) {
+      console.error('Reject friend request error:', error);
       throw error;
     }
   };
@@ -498,6 +614,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createCookbook,
         addFriend,
         removeFriend,
+        acceptFriendRequest,
+        rejectFriendRequest,
         addRecipeToCookbook,
         sendPasswordResetEmail,
         syncGuestDataToUser,
