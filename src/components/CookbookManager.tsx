@@ -523,7 +523,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                       <Label htmlFor="copied-cookbook-public">
                         {copiedCookbookIsPublic ? (
                           <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Globe className="h-4 w-4" /> Make Public
+                            <Globe className="h-4 w-4" /> Public
                           </span>
                         ) : (
                           <span className="flex items-center gap-1 text-sm text-muted-foreground">
