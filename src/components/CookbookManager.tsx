@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch'; // Import Switch
 import { Label } from '@/components/ui/label'; // Import Label
-import { BookOpen, Plus, Trash2, Edit, Loader2, Save, Globe, Lock, Copy } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Edit, Loader2, Save, Globe, Lock, Copy, CalendarDays, Printer } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +27,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"; // Import AlertDialog components
 import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
+import { exportCookbookRecipesToPDF } from '@/utils/cookbook-pdf-export'; // Import new PDF export utility
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -62,9 +63,10 @@ interface Cookbook {
 
 interface CookbookManagerProps {
   onRecipeRemoved: (id: string) => void; // Still needed for local state sync in AppLayout
+  setActiveTab: (tab: string) => void; // New prop to change active tab
 }
 
-const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) => {
+const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setActiveTab }) => {
   const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy, deleteCookbook, copyCookbook } = useAppContext();
   const queryClient = useQueryClient(); // Get queryClient for invalidation
 
@@ -357,6 +359,61 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
     }
   };
 
+  const handlePlanWithCookbook = () => {
+    if (currentSelectedCookbook) {
+      setSelectedCookbook(currentSelectedCookbook); // Ensure it's selected in context
+      setActiveTab('planner'); // Switch to the meal planner tab
+      toast({
+        title: 'Switched to Meal Planner',
+        description: `Now planning meals with "${currentSelectedCookbook.name}".`
+      });
+    } else {
+      toast({
+        title: 'No Cookbook Selected',
+        description: 'Please select a cookbook to plan meals with.',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleExportCookbookRecipes = async () => {
+    if (!currentSelectedCookbook) {
+      toast({
+        title: 'No Cookbook Selected',
+        description: 'Please select a cookbook to export its recipes.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const recipesToExport = user && currentSelectedCookbook.user_id !== 'guest' 
+      ? recipesInCookbook 
+      : guestRecipesForSelectedCookbook;
+
+    if (!recipesToExport || recipesToExport.length === 0) {
+      toast({
+        title: 'No Recipes to Export',
+        description: 'This cookbook does not contain any recipes to export.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      await exportCookbookRecipesToPDF(recipesToExport, currentSelectedCookbook.name);
+      toast({
+        title: 'Recipes Exported!',
+        description: `"${currentSelectedCookbook.name}" recipes downloaded as PDF.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Export Failed',
+        description: error.message || 'An error occurred while exporting recipes.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const recipesToDisplay = user ? recipesInCookbook : guestRecipesForSelectedCookbook;
   const isLoadingCurrentRecipes = user ? isLoadingRecipes : false; // Only show loading for DB fetch
 
@@ -520,7 +577,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
             </p>
           ) : (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mt-4">
                 <h4 className="font-medium flex items-center gap-2">
                   {currentSelectedCookbook?.name || 'No Cookbook Selected'}
                   {currentSelectedCookbook && (
@@ -613,6 +670,25 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
                     </AlertDialogContent>
                   </AlertDialog>
                 )}
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <Button 
+                  onClick={handlePlanWithCookbook} 
+                  disabled={!currentSelectedCookbook || isLoadingCurrentRecipes}
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                >
+                  <CalendarDays className="h-4 w-4 mr-2" />
+                  Plan with this Cookbook
+                </Button>
+                <Button 
+                  onClick={handleExportCookbookRecipes} 
+                  disabled={!currentSelectedCookbook || isLoadingCurrentRecipes || (recipesToDisplay?.length || 0) === 0}
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Export Recipes
+                </Button>
               </div>
 
               <div className="mt-4 space-y-2 max-h-64 overflow-y-auto custom-scrollbar">

@@ -52,6 +52,7 @@ const Index = () => {
     new Date().toLocaleDateString('en-US', { month: 'long' })
   );
   const [openDmWindows, setOpenDmWindows] = useState<OpenDmWindow[]>([]); // State to manage multiple DM windows
+  const [activeTab, setActiveTab] = useState('planner'); // New state for active tab
 
   const handleRecipeAdded = (recipe: Recipe) => {
     setRecipes(prev => {
@@ -107,7 +108,7 @@ const Index = () => {
               </p>
             </div>
 
-            <Tabs defaultValue="planner" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="planner">Meal Planner</TabsTrigger>
                 <TabsTrigger value="community">Community</TabsTrigger>
@@ -153,28 +154,8 @@ const Index = () => {
               </TabsContent>
               
               <TabsContent value="recipes">
-                {recipes.length > 0 ? (
-                  <div className="space-y-4">
-                    <h2 className="text-2xl font-semibold text-foreground flex items-center gap-2">
-                      📚 Your Recipe Collection
-                      <span className="text-lg text-muted-foreground">({recipes.length})</span>
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {recipes.map(recipe => (
-                        <RecipeCard
-                          key={recipe.id}
-                          recipe={recipe}
-                          onAddToShoppingList={() => { /* Placeholder for now */ }}
-                          onRecipeAdded={handleRecipeAdded}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">No recipes yet. Start by scraping some recipes!</p>
-                  </div>
-                )}
+                {/* Pass setActiveTab to CookbookManager */}
+                <CookbookManager onRecipeRemoved={handleRecipeRemoved} setActiveTab={setActiveTab} />
               </TabsContent>
 
               <TabsContent value="add-recipe">
