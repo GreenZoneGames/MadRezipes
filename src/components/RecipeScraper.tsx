@@ -39,7 +39,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [scrapedRecipes, setScrapedRecipes] = useState<Recipe[]>([]);
-  const [selectedRecipes, setSelectedRecipes] = new Set<string>();
+  const [selectedRecipes, setSelectedRecipes] = useState<Set<string>>(new Set()); // Corrected initialization
 
   const handleScrape = async () => {
     if (!url.trim()) {
@@ -52,7 +52,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
 
     setLoading(true);
     setScrapedRecipes([]);
-    setSelectedRecipes(new Set());
+    setSelectedRecipes(new Set()); // Now correctly calling the setter function
     
     try {
       // Use supabase.functions.invoke instead of direct fetch
