@@ -55,7 +55,7 @@ interface AppContextType {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username?: string, securityQuestion?: string, securityAnswer?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  createCookbook: (name: string, description?: string) => Promise<void>;
+  createCookbook: (name: string, description?: string) => Promise<Cookbook | null>; // Updated return type
   addFriend: (email: string) => Promise<void>;
   removeFriend: (friendId: string) => Promise<void>;
   shareRecipe: (recipeId: string, friendId: string) => Promise<void>;
@@ -74,7 +74,7 @@ const defaultAppContext: AppContextType = {
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
-  createCookbook: async () => {},
+  createCookbook: async () => null, // Updated default return
   addFriend: async () => {},
   removeFriend: async () => {},
   shareRecipe: async () => {},
@@ -214,8 +214,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const createCookbook = async (name: string, description?: string) => {
-    if (!user) return;
+  const createCookbook = async (name: string, description?: string): Promise<Cookbook | null> => {
+    if (!user) return null;
     
     try {
       const { data, error } = await supabase
@@ -226,8 +226,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       if (error) throw error;
       setCookbooks(prev => [...prev, data]);
+      return data; // Return the newly created cookbook
     } catch (error) {
       console.error('Create cookbook error:', error);
+      throw error; // Re-throw to be caught by calling component
     }
   };
 

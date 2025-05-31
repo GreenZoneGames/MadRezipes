@@ -22,7 +22,7 @@ const securityQuestions = [
 ];
 
 const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
-  const { signIn, signUp, sendPasswordResetEmail } = useAppContext();
+  const { signIn, signUp, sendPasswordResetEmail, user: currentUser } = useAppContext(); // Get currentUser from context
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -61,10 +61,27 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
         
         if (error) throw error;
         
-        toast({
-          title: '🍽️ Welcome back!',
-          description: 'Successfully signed in to MadRezipes.'
-        });
+        // After successful sign-in, fetch the user data to get the username
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('username, email')
+          .eq('id', data.user?.id)
+          .single();
+
+        if (userError) {
+          console.error('Error fetching user data after sign-in:', userError);
+          toast({
+            title: 'Sign in successful, but profile data missing',
+            description: 'Please refresh the page or contact support.',
+            variant: 'destructive'
+          });
+        } else {
+          const displayUsername = userData?.username || userData?.email?.split('@')[0] || 'User';
+          toast({
+            title: `🍽️ Welcome back, ${displayUsername}!`,
+            description: 'Successfully signed in to MadRezipes.'
+          });
+        }
       } else {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),

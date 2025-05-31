@@ -163,9 +163,12 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
     }
     setCreatingCookbook(true);
     try {
-      await createCookbook(newCookbookName.trim());
+      const newCookbook = await createCookbook(newCookbookName.trim());
       setNewCookbookName('');
       toast({ title: 'Cookbook Created!', description: `"${newCookbookName}" has been created.` });
+      if (newCookbook) {
+        setSelectedCookbookId(newCookbook.id); // Automatically select the new cookbook
+      }
     } catch (error: any) {
       toast({ title: 'Creation Failed', description: error.message || 'Failed to create cookbook.', variant: 'destructive' });
     } finally {
