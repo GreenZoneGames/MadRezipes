@@ -47,7 +47,10 @@ const Index = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
   const [availableIngredients, setAvailableIngredients] = useState<string[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  // Initialize selectedMonth to the current month
+  const [selectedMonth, setSelectedMonth] = useState<string>(
+    new Date().toLocaleDateString('en-US', { month: 'long' })
+  );
   const [openDmWindows, setOpenDmWindows] = useState<OpenDmWindow[]>([]); // State to manage multiple DM windows
 
   const handleRecipeAdded = (recipe: Recipe) => {

@@ -82,6 +82,11 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
   }, [selectedCookbook, guestRecipes, dbRecipes]);
 
   const generateRandomPlan = () => {
+    console.log('Attempting to generate meal plan...');
+    console.log('Selected Cookbook:', selectedCookbook?.name || 'None');
+    console.log('Recipes available for planning:', recipesToPlan.length);
+    console.log('Selected Month:', selectedMonth);
+
     if (recipesToPlan.length === 0 || !selectedMonth) {
       toast({ 
         title: '🍽️ No Recipes Available', 
@@ -124,6 +129,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
 
     setMealPlan(newPlan);
     onMealPlanChange(newPlan);
+    console.log('Meal plan generated successfully. New plan length:', newPlan.length);
     toast({ 
       title: '🗓️ Full Month Plan Created!', 
       description: `${newPlan.length} delicious meals planned for ${selectedMonth}!` 
@@ -195,6 +201,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
   };
 
   const handleExportMealPlan = async () => {
+    console.log('Export button clicked. Current meal plan length:', mealPlan.length);
     try {
       await exportMealPlanToPDF(mealPlan, selectedMonth, allRecipes);
       toast({ 
