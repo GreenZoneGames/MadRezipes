@@ -6,6 +6,7 @@ import { Loader2, ChefHat, Plus, Utensils, CheckCircle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { supabase } from '@/lib/supabase'; // Import supabase client
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -38,7 +39,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [scrapedRecipes, setScrapedRecipes] = useState<Recipe[]>([]);
-  const [selectedRecipes, setSelectedRecipes] = useState<Set<string>>(new Set());
+  const [selectedRecipes, setSelectedRecipes] = new Set<string>();
 
   const handleScrape = async () => {
     if (!url.trim()) {
@@ -54,33 +55,18 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
     setSelectedRecipes(new Set());
     
     try {
-      const response = await fetch(
-        'https://waktqmtlimtzgmvnbzsr.supabase.co/functions/v1/294a786b-aa28-4589-98d8-4daab33aa382',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ url })
-        }
-      );
+      // Use supabase.functions.invoke instead of direct fetch
+      const { data, error } = await supabase.functions.invoke('294a786b-aa28-4589-98d8-4daab33aa382', {
+        method: 'POST',
+        body: { url }
+      });
       
-      const text = await response.text();
-      
-      if (!response.ok) {
-        console.error('Response not ok:', response.status, text);
-        throw new Error(`Server error: ${response.status}`);
+      if (error) {
+        console.error('Supabase function invoke error:', error);
+        throw new Error(error.message);
       }
       
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError, 'Response text:', text);
-        throw new Error('Invalid response from server');
-      }
-      
-      if (data.error) {
+      if (data.error) { // Assuming the function itself might return an error object in its payload
         throw new Error(data.error);
       }
       
