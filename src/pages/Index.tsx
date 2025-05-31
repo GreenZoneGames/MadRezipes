@@ -9,6 +9,7 @@ import ShoppingList from '@/components/ShoppingList';
 import ShoppingListPDF from '@/components/ShoppingListPDF';
 import MealExporter from '@/components/MealExporter';
 import CommunityFunctions from '@/components/CommunityFunctions';
+import ManualRecipeForm from '@/components/ManualRecipeForm'; // Import the new component
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface CategorizedIngredients {
@@ -82,10 +83,11 @@ const Index = () => {
             </div>
 
             <Tabs defaultValue="planner" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4"> {/* Increased grid columns */}
                 <TabsTrigger value="planner">Meal Planner</TabsTrigger>
                 <TabsTrigger value="community">Community</TabsTrigger>
                 <TabsTrigger value="recipes">Recipes</TabsTrigger>
+                <TabsTrigger value="add-recipe">Add Recipe</TabsTrigger> {/* New Tab Trigger */}
               </TabsList>
               
               <TabsContent value="planner" className="space-y-6">
@@ -142,6 +144,10 @@ const Index = () => {
                     <p className="text-muted-foreground">No recipes yet. Start by scraping some recipes!</p>
                   </div>
                 )}
+              </TabsContent>
+
+              <TabsContent value="add-recipe"> {/* New Tab Content */}
+                <ManualRecipeForm onRecipeAdded={handleRecipeAdded} />
               </TabsContent>
             </Tabs>
           </div>
