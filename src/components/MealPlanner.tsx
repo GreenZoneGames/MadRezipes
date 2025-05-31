@@ -110,7 +110,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
           r.meal_type?.toLowerCase() === mealType.toLowerCase()
         );
         
-        let selectedRecipe: Recipe;
+        let selectedRecipe: Recipe | undefined;
         if (matchingRecipes.length > 0) {
           selectedRecipe = matchingRecipes[Math.floor(Math.random() * matchingRecipes.length)];
         } else {
@@ -118,12 +118,14 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
           selectedRecipe = recipesToPlan[Math.floor(Math.random() * recipesToPlan.length)];
         }
 
-        const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        newPlan.push({
-          date: dateStr,
-          recipe: selectedRecipe,
-          mealType
-        });
+        if (selectedRecipe) {
+          const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          newPlan.push({
+            date: dateStr,
+            recipe: selectedRecipe,
+            mealType
+          });
+        }
       });
     }
 

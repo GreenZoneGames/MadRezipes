@@ -55,7 +55,7 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  const fullMonthPlan = mealPlan.length > 0 ? mealPlan : generateFullMonthPlan(allRecipes);
+  const fullMonthPlan = mealPlan.length > 0 ? mealPlan : generateFullMonthPlan(allRecipes, selectedMonth);
 
   // Page 1: Calendar View
   doc.setFillColor(41, 37, 36);
@@ -89,7 +89,7 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
   doc.setTextColor(255, 255, 255);
 
   const year = currentDate.getFullYear();
-  const monthIndex = currentDate.getMonth();
+  const monthIndex = new Date(Date.parse(selectedMonth + " 1, " + year)).getMonth(); // Get month index from selectedMonth string
   const firstDay = new Date(year, monthIndex, 1).getDay();
   const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
@@ -189,24 +189,35 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
   doc.save(`meal-calendar-${monthName.replace(' ', '-')}.pdf`);
 };
 
-const generateFullMonthPlan = (recipes: Recipe[]): MealPlan[] => {
+const generateFullMonthPlan = (recipes: Recipe[], selectedMonth: string): MealPlan[] => {
   if (recipes.length === 0) return [];
 
   const currentDate = new Date();
   const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthIndex = new Date(Date.parse(selectedMonth + " 1, " + year)).getMonth();
+  const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
   const fullMonthPlan: MealPlan[] = [];
   const mealTypes: ('breakfast' | 'lunch' | 'dinner')[] = ['breakfast', 'lunch', 'dinner'];
 
   for (let day = 1; day <= daysInMonth; day++) {
     mealTypes.forEach(mealType => {
-      const randomRecipe = recipes[Math.floor(Math.random() * recipes.length)];
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const matchingRecipes = recipes.filter(r => 
+        r.meal_type?.toLowerCase() === mealType.toLowerCase()
+      );
+      
+      let selectedRecipe: Recipe;
+      if (matchingRecipes.length > 0) {
+        selectedRecipe = matchingRecipes[Math.floor(Math.random() * matchingRecipes.length)];
+      } else {
+        // Fallback to any random recipe if no specific meal type match
+        selectedRecipe = recipes[Math.floor(Math.random() * recipes.length)];
+      }
+
+      const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       fullMonthPlan.push({
         date: dateStr,
-        recipe: randomRecipe,
+        recipe: selectedRecipe,
         mealType
       });
     });
