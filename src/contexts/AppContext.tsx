@@ -262,13 +262,55 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        const { data: userData } = await supabase
+        const { data: userData, error: fetchUserError } = await supabase
           .from('users')
           .select('*')
-          .eq('email', session.user.email)
+          .eq('id', session.user.id) // Use ID for direct lookup
           .single();
         
-        if (userData) {
+        if (fetchUserError && fetchUserError.code === 'PGRST116') { // PGRST116 means no rows found
+          console.warn('User session exists but profile data not found in public.users. Attempting to create profile.');
+          // Attempt to create a basic profile if it's missing
+          const { error: insertProfileError } = await supabase
+            .from('users')
+            .insert({
+              id: session.user.id,
+              email: session.user.email,
+              username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || null,
+            });
+
+          if (insertProfileError) {
+            console.error('Error creating missing user profile:', insertProfileError);
+            // If we can't even create a basic profile, something is seriously wrong.
+            // Sign out to prevent an inconsistent state.
+            await supabase.auth.signOut();
+            setUser(null);
+          } else {
+            // Profile successfully created, now fetch it to set the user state
+            const { data: newUserData, error: fetchNewUserError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+
+            if (fetchNewUserError || !newUserData) {
+              console.error('Error fetching newly created user profile:', fetchNewUserError);
+              await supabase.auth.signOut();
+              setUser(null);
+            } else {
+              setUser(newUserData);
+              loadCookbooks(newUserData.id);
+              loadFriends(newUserData.id);
+              if (guestCookbooks.length > 0 || guestRecipes.length > 0) {
+                syncGuestDataToUser();
+              }
+            }
+          }
+        } else if (fetchUserError) {
+          console.error('Error fetching user data:', fetchUserError);
+          await supabase.auth.signOut(); // Sign out on other fetch errors
+          setUser(null);
+        } else if (userData) {
           setUser(userData);
           loadCookbooks(userData.id);
           loadFriends(userData.id);
@@ -284,6 +326,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     } catch (error) {
       console.error('Check user error:', error);
+      // If there's an error checking user, assume logged out state
+      setUser(null);
     }
   }, [guestCookbooks, guestRecipes, syncGuestDataToUser]);
 
@@ -329,7 +373,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         
         if (insertError) {
           console.error('Error inserting user data:', insertError);
-          // Even if insert fails, user is created in auth.users, so proceed
+          throw insertError; // Explicitly throw error if profile insert fails
         }
       }
       // checkUser will handle setting user and syncing data
