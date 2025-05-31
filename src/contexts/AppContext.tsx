@@ -56,6 +56,7 @@ interface AppContextType {
   friends: Friend[];
   guestCookbooks: Cookbook[]; // New state for guest cookbooks
   guestRecipes: Recipe[]; // New state for guest recipes
+  setGuestRecipes: React.Dispatch<React.SetStateAction<Recipe[]>>; // Added to default context
   setSelectedCookbook: (cookbook: Cookbook | null) => void;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username?: string, securityQuestion?: string, securityAnswer?: string) => Promise<void>;
@@ -77,6 +78,7 @@ const defaultAppContext: AppContextType = {
   friends: [],
   guestCookbooks: [],
   guestRecipes: [],
+  setGuestRecipes: () => {}, // Dummy function added here
   setSelectedCookbook: () => {},
   signIn: async () => {},
   signUp: async () => {},
@@ -488,6 +490,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         friends,
         guestCookbooks,
         guestRecipes,
+        setGuestRecipes,
         setSelectedCookbook,
         signIn,
         signUp,
