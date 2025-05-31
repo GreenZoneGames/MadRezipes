@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"; // Import AlertDialog components
+import { Checkbox } from '@/components/ui/checkbox'; // Import Checkbox
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -65,6 +66,8 @@ interface CookbookManagerProps {
 
 const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) => {
   const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy, deleteCookbook, copyCookbook } = useAppContext();
+  const queryClient = useQueryClient(); // Get queryClient for invalidation
+
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newCookbookName, setNewCookbookName] = useState('');
   const [newCookbookDescription, setNewCookbookDescription] = useState('');
@@ -86,6 +89,9 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
   const [copiedCookbookName, setCopiedCookbookName] = useState('');
   const [copiedCookbookIsPublic, setCopiedCookbookIsPublic] = useState(false);
   const [isCopyingCookbook, setIsCopyingCookbook] = useState(false);
+
+  // State for bulk delete
+  const [selectedCookbookIds, setSelectedCookbookIds] = useState<Set<string>>(new Set());
 
   // Ensure unique cookbooks for display
   const uniqueCookbooks = Array.from(new Map(
@@ -247,6 +253,33 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
     }
   };
 
+  const handleBulkDeleteCookbooks = async () => {
+    if (selectedCookbookIds.size === 0) return;
+
+    setLoading(true);
+    try {
+      for (const id of selectedCookbookIds) {
+        const cookbookToDelete = uniqueCookbooks.find(cb => cb.id === id);
+        if (cookbookToDelete) {
+          await deleteCookbook(id);
+        }
+      }
+      toast({
+        title: 'Cookbooks Deleted!',
+        description: `${selectedCookbookIds.size} cookbook(s) and their recipes have been removed.`
+      });
+      setSelectedCookbookIds(new Set()); // Clear selection
+    } catch (error: any) {
+      toast({
+        title: 'Bulk Deletion Failed',
+        description: error.message || 'An error occurred during bulk deletion.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCopyCookbook = async () => {
     if (!user) {
       toast({
@@ -302,6 +335,26 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
   const handleViewRecipeDetails = (recipe: Recipe) => {
     setSelectedRecipeForDetails(recipe);
     setShowRecipeDetailsDialog(true);
+  };
+
+  const toggleCookbookSelection = (cookbookId: string) => {
+    setSelectedCookbookIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cookbookId)) {
+        newSet.delete(cookbookId);
+      } else {
+        newSet.add(cookbookId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleSelectAllCookbooks = () => {
+    if (selectedCookbookIds.size === uniqueCookbooks.length) {
+      setSelectedCookbookIds(new Set());
+    } else {
+      setSelectedCookbookIds(new Set(uniqueCookbooks.map(cb => cb.id)));
+    }
   };
 
   const recipesToDisplay = user ? recipesInCookbook : guestRecipesForSelectedCookbook;
@@ -461,30 +514,32 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
             </SelectContent>
           </Select>
 
-          {uniqueCookbooks.length === 0 && (
+          {uniqueCookbooks.length === 0 ? (
             <p className="text-muted-foreground text-center py-4 text-sm">
               No cookbooks yet. Create your first one!
             </p>
-          )}
-
-          {currentSelectedCookbook && (
+          ) : (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <h4 className="font-medium flex items-center gap-2">
-                  {currentSelectedCookbook.name}
-                  <Badge variant="secondary" className="text-xs">
-                    {currentSelectedCookbook.is_public ? (
-                      <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> Public</span>
-                    ) : (
-                      <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private</span>
-                    )}
-                  </Badge>
+                  {currentSelectedCookbook?.name || 'No Cookbook Selected'}
+                  {currentSelectedCookbook && (
+                    <Badge variant="secondary" className="text-xs">
+                      {currentSelectedCookbook.is_public ? (
+                        <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> Public</span>
+                      ) : (
+                        <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private</span>
+                      )}
+                    </Badge>
+                  )}
                 </h4>
                 <div className="flex items-center gap-2">
-                  <Badge variant="secondary">
-                    {recipesToDisplay?.length || 0} recipes
-                  </Badge>
-                  {user && currentSelectedCookbook.user_id !== 'guest' && (
+                  {currentSelectedCookbook && (
+                    <Badge variant="secondary">
+                      {recipesToDisplay?.length || 0} recipes
+                    </Badge>
+                  )}
+                  {user && currentSelectedCookbook?.user_id !== 'guest' && currentSelectedCookbook && (
                     <>
                       <Button variant="ghost" size="sm" onClick={() => handleEditCookbook(currentSelectedCookbook)}>
                         <Edit className="h-4 w-4" />
@@ -517,11 +572,48 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
                   )}
                 </div>
               </div>
-              {currentSelectedCookbook.description && (
+              {currentSelectedCookbook?.description && (
                 <p className="text-sm text-muted-foreground">
                   {currentSelectedCookbook.description}
                 </p>
               )}
+
+              <div className="flex items-center justify-between mt-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="select-all-cookbooks"
+                    checked={selectedCookbookIds.size === uniqueCookbooks.length && uniqueCookbooks.length > 0}
+                    onCheckedChange={toggleSelectAllCookbooks}
+                  />
+                  <Label htmlFor="select-all-cookbooks" className="text-sm font-medium">
+                    Select All ({selectedCookbookIds.size})
+                  </Label>
+                </div>
+                {selectedCookbookIds.size > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" disabled={loading}>
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Selected ({selectedCookbookIds.size})
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Bulk Deletion</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete {selectedCookbookIds.size} selected cookbook(s)? This action cannot be undone and will also delete all recipes within them.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleBulkDeleteCookbooks} className="bg-destructive hover:bg-destructive/90">
+                          {loading ? 'Deleting...' : 'Confirm Delete'}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
 
               <div className="mt-4 space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
                 {isLoadingCurrentRecipes ? (
