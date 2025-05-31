@@ -101,7 +101,7 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
         
         toast({
           title: '🎉 Account created!',
-          description: 'Welcome to MadRezipes! Please check your email to verify your account.'
+          description: 'Welcome to MadRezipes!'
         });
       }
       resetForm();
