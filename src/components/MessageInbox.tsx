@@ -9,6 +9,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import ThreadedMessage from './ThreadedMessage';
+import { v4 as uuidv4 } from 'uuid'; // Import uuid for temporary IDs
 
 interface Message {
   id: string;
@@ -35,7 +36,7 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCompose, setShowCompose] = useState(false);
-  const [newMessage, setNewMessage] = useState('');
+  const [newMessageContent, setNewMessageContent] = useState(''); // Renamed to avoid conflict
   const [selectedFriend, setSelectedFriend] = useState('');
   const [sending, setSending] = useState(false);
 
@@ -97,30 +98,50 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
   };
 
   const sendMessage = async () => {
-    if (!user || !newMessage.trim() || !selectedFriend) return;
+    if (!user || !newMessageContent.trim() || !selectedFriend) return;
     
     setSending(true);
+    const tempId = uuidv4(); // Generate a temporary ID for optimistic update
+    const newMsg: Message = {
+      id: tempId,
+      sender_id: user.id,
+      sender_username: user.username || user.email?.split('@')[0] || 'User',
+      recipient_id: selectedFriend,
+      content: newMessageContent.trim(),
+      message_type: 'text',
+      created_at: new Date().toISOString(), // Use client time for optimistic display
+      read: false,
+      replies: [] // New top-level message has no replies initially
+    };
+
+    // Optimistically add the new message to the top of the list
+    setMessages(prev => [newMsg, ...prev]);
+    setNewMessageContent('');
+    setSelectedFriend('');
+    setShowCompose(false);
+
     try {
       const { error } = await supabase
         .from('messages')
         .insert({
           sender_id: user.id,
-          sender_username: user.username || user.email?.split('@')[0] || 'User',
+          sender_username: newMsg.sender_username,
           recipient_id: selectedFriend,
-          content: newMessage.trim(),
-          message_type: 'text'
+          content: newMsg.content,
+          message_type: 'text',
+          read: false
         });
       
-      if (error) throw error;
+      if (error) {
+        // If insert fails, remove the optimistically added message
+        setMessages(prev => prev.filter(msg => msg.id !== tempId));
+        throw error;
+      }
       
-      setNewMessage('');
-      setSelectedFriend('');
-      setShowCompose(false);
       toast({
         title: 'Message sent!',
         description: 'Your message has been sent successfully.'
       });
-      fetchMessages(); // Re-fetch messages to show the new one
     } catch (error: any) {
       toast({
         title: 'Error sending message',
@@ -138,24 +159,62 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
     const parentMessage = messages.find(m => m.id === parentId);
     if (!parentMessage) return;
     
-    // Determine the actual recipient of the reply (the original sender of the parent message)
     const replyRecipientId = parentMessage.sender_id;
+    const tempReplyId = uuidv4(); // Generate a temporary ID for the reply
+    const newReply: Message = {
+      id: tempReplyId,
+      sender_id: user.id,
+      sender_username: user.username || user.email?.split('@')[0] || 'User',
+      recipient_id: replyRecipientId,
+      parent_message_id: parentId,
+      thread_id: parentMessage.thread_id || parentId,
+      content,
+      message_type: 'text',
+      created_at: new Date().toISOString(),
+      read: false,
+    };
 
-    const { error } = await supabase
-      .from('messages')
-      .insert({
-        sender_id: user.id,
-        sender_username: user.username || user.email?.split('@')[0] || 'User',
-        recipient_id: replyRecipientId,
-        parent_message_id: parentId,
-        thread_id: parentMessage.thread_id || parentId, // Use existing thread_id or parentId if new thread
-        content,
-        message_type: 'text'
+    // Optimistically add the reply to the parent message's replies array
+    setMessages(prevMessages => prevMessages.map(msg => 
+      msg.id === parentId 
+        ? { ...msg, replies: [...(msg.replies || []), newReply] } 
+        : msg
+    ));
+
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          sender_id: user.id,
+          sender_username: newReply.sender_username,
+          recipient_id: replyRecipientId,
+          parent_message_id: parentId,
+          thread_id: parentMessage.thread_id || parentId,
+          content,
+          message_type: 'text'
+        });
+      
+      if (error) {
+        // If insert fails, remove the optimistically added reply
+        setMessages(prevMessages => prevMessages.map(msg => 
+          msg.id === parentId 
+            ? { ...msg, replies: (msg.replies || []).filter(reply => reply.id !== tempReplyId) } 
+            : msg
+        ));
+        throw error;
+      }
+      
+      toast({
+        title: 'Reply sent!',
+        description: 'Your reply has been sent successfully.'
       });
-    
-    if (error) throw error;
-    
-    fetchMessages(); // Re-fetch messages to update the thread
+    } catch (error: any) {
+      toast({
+        title: 'Error sending reply',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
   };
 
   useEffect(() => {
@@ -205,14 +264,14 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
             </div>
             <Textarea
               placeholder="Write your message..."
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
+              value={newMessageContent}
+              onChange={(e) => setNewMessageContent(e.target.value)}
               className="min-h-[100px]"
             />
             <div className="flex gap-2">
               <Button
                 onClick={sendMessage}
-                disabled={sending || !newMessage.trim() || !selectedFriend}
+                disabled={sending || !newMessageContent.trim() || !selectedFriend}
               >
                 {sending ? 'Sending...' : 'Send Message'}
               </Button>
@@ -220,7 +279,7 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
                 variant="ghost"
                 onClick={() => {
                   setShowCompose(false);
-                  setNewMessage('');
+                  setNewMessageContent('');
                   setSelectedFriend('');
                 }}
               >
@@ -230,20 +289,20 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
           </div>
         )}
         
-        <div className="space-y-3 min-h-[200px]"> {/* Added min-h to prevent resizing */}
+        <div className="space-y-3 min-h-[200px]">
           {loading ? (
-            <div className="text-center py-4 text-muted-foreground"> {/* Adjusted padding */}
+            <div className="text-center py-4 text-muted-foreground">
               Loading messages...
             </div>
           ) : messages.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground"> {/* Adjusted padding */}
+            <div className="text-center py-4 text-muted-foreground">
               <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>No messages yet</p>
               <p className="text-xs">Start a conversation with your friends!</p>
             </div>
           ) : (
             messages.map((message) => (
-              <div key={message.id} onClick={() => !message.read && message.recipient_id === user?.id && markAsRead(message.id)}>
+              <div key={message.id} onClick={()={() => !message.read && message.recipient_id === user?.id && markAsRead(message.id)}}>
                 <ThreadedMessage
                   message={message}
                   onReply={handleReply}
