@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, UserPlus, Share2, Trash2, Check, X, MessageSquare } from 'lucide-react';
+import { Users, UserPlus, Share2, Trash2, Check, X, MessageSquare, Loader2 } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
+import { useQuery } from '@tanstack/react-query'; // Import useQuery
+import { supabase } from '@/lib/supabase'; // Import supabase
 
 interface Friend {
   id: string;
@@ -14,6 +16,12 @@ interface Friend {
   email: string; // The email of the friend (the other user in the relationship)
   status: 'pending' | 'accepted';
   username?: string; // Add username for display
+}
+
+interface UserProfile {
+  id: string;
+  email: string;
+  username?: string;
 }
 
 interface FriendsListProps {
@@ -110,6 +118,41 @@ const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
       });
     }
   };
+
+  // Fetch suggested friends
+  const { data: suggestedUsers, isLoading: isLoadingSuggestions } = useQuery<UserProfile[]>({
+    queryKey: ['suggestedUsers', user?.id, friends], // Re-fetch when user or friends list changes
+    queryFn: async () => {
+      if (!user) return [];
+
+      // Get IDs of users who are already friends (or have pending requests) with the current user
+      const existingFriendIds = new Set<string>();
+      friends.forEach(f => {
+        if (f.user_id === user.id) {
+          existingFriendIds.add(f.friend_id);
+        } else if (f.friend_id === user.id) {
+          existingFriendIds.add(f.user_id);
+        }
+      });
+      existingFriendIds.add(user.id); // Exclude current user itself
+
+      let query = supabase
+        .from('users')
+        .select('id, email, username')
+        .order('created_at', { ascending: false })
+        .limit(5); // Limit to 5 suggestions
+
+      if (existingFriendIds.size > 0) {
+        query = query.not('id', 'in', Array.from(existingFriendIds));
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user, // Only fetch if user is logged in
+  });
 
   if (!user) {
     return (
@@ -214,7 +257,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
             acceptedFriends.map(friend => (
               <div key={friend.id} className="flex items-center justify-between p-2 border rounded">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{friend.email}</span>
+                  <span className="text-sm font-medium">{friend.username || friend.email}</span>
                   <Badge variant="default" className="text-xs">
                     Accepted
                   </Badge>
@@ -223,7 +266,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => onOpenDm(friend.friend_id === user.id ? friend.user_id : friend.friend_id, friend.email)}
+                    onClick={() => onOpenDm(friend.friend_id === user.id ? friend.user_id : friend.friend_id, friend.username || friend.email)}
                     className="text-blue-600 hover:text-blue-800 border-blue-300"
                   >
                     <MessageSquare className="h-3 w-3" />
@@ -239,6 +282,41 @@ const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
                 </div>
               </div>
             ))
+          )}
+        </div>
+
+        {/* Friend Suggestions Section */}
+        <div className="space-y-2 border-t pt-4">
+          <h3 className="font-semibold text-sm flex items-center gap-1">
+            <UserPlus className="h-4 w-4 text-purple-500" />
+            Friend Suggestions
+          </h3>
+          {isLoadingSuggestions ? (
+            <div className="text-center py-4 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+              Loading suggestions...
+            </div>
+          ) : suggestedUsers && suggestedUsers.length > 0 ? (
+            <div className="space-y-2">
+              {suggestedUsers.map(suggestedUser => (
+                <div key={suggestedUser.id} className="flex items-center justify-between p-2 border rounded bg-purple-50/50">
+                  <span className="text-sm font-medium">{suggestedUser.username || suggestedUser.email}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleAddFriend(suggestedUser.email)}
+                    disabled={loading}
+                    className="text-purple-600 hover:text-purple-800 border-purple-300"
+                  >
+                    <UserPlus className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No new friend suggestions at the moment.
+            </p>
           )}
         </div>
       </CardContent>
