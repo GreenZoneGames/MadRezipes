@@ -15,6 +15,17 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import UserAuth from './UserAuth'; // Import UserAuth for login prompt
 import RecipeCard from './RecipeCard'; // Import RecipeCard to display details
 import { Textarea } from '@/components/ui/textarea'; // Import Textarea for cookbook description
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"; // Import AlertDialog components
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -53,7 +64,7 @@ interface CookbookManagerProps {
 }
 
 const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) => {
-  const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy } = useAppContext();
+  const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy, deleteCookbook } = useAppContext();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newCookbookName, setNewCookbookName] = useState('');
   const [newCookbookDescription, setNewCookbookDescription] = useState('');
@@ -213,6 +224,22 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
     }
   };
 
+  const handleDeleteCookbook = async (cookbookId: string, cookbookName: string) => {
+    try {
+      await deleteCookbook(cookbookId);
+      toast({
+        title: 'Cookbook Deleted!',
+        description: `"${cookbookName}" and all its recipes have been removed.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Deletion Failed',
+        description: error.message || 'An error occurred while deleting the cookbook.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleSaveToAccount = () => {
     if (!user) {
       setShowAuthDialog(true); // Open login/signup dialog
@@ -345,9 +372,35 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
                     {recipesToDisplay?.length || 0} recipes
                   </Badge>
                   {user && currentSelectedCookbook.user_id !== 'guest' && (
-                    <Button variant="ghost" size="sm" onClick={() => handleEditCookbook(currentSelectedCookbook)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    <>
+                      <Button variant="ghost" size="sm" onClick={() => handleEditCookbook(currentSelectedCookbook)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This action cannot be undone. This will permanently delete the cookbook "{currentSelectedCookbook.name}" and all recipes within it.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDeleteCookbook(currentSelectedCookbook.id, currentSelectedCookbook.name)}
+                              className="bg-destructive hover:bg-destructive/90"
+                            >
+                              Delete Cookbook
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
                   )}
                 </div>
               </div>
@@ -429,7 +482,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
               <Textarea
                 placeholder="Description (optional)"
                 value={editingCookbookDescription}
-                onChange={(e) => setNewCookbookDescription(e.target.value)}
+                onChange={(e) => setEditingCookbookDescription(e.target.value)}
                 disabled={isUpdatingCookbook}
                 rows={3}
               />

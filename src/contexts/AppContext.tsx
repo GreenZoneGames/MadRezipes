@@ -71,6 +71,7 @@ interface AppContextType {
   createCookbook: (name: string, description?: string, isPublic?: boolean) => Promise<Cookbook | null>;
   updateUserProfile: (updates: Partial<User>) => Promise<void>; // New
   updateCookbookPrivacy: (cookbookId: string, isPublic: boolean) => Promise<void>; // New
+  deleteCookbook: (cookbookId: string) => Promise<void>; // New
   addFriend: (email: string) => Promise<void>;
   removeFriend: (friendId: string) => Promise<void>;
   acceptFriendRequest: (requestId: string, friendUserId: string) => Promise<void>; // New function
@@ -97,6 +98,7 @@ const defaultAppContext: AppContextType = {
   createCookbook: async () => null,
   updateUserProfile: async () => {}, // Dummy
   updateCookbookPrivacy: async () => {}, // Dummy
+  deleteCookbook: async () => {}, // Dummy
   addFriend: async () => {},
   removeFriend: async () => {},
   acceptFriendRequest: async () => {}, // Dummy function
@@ -510,6 +512,54 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const deleteCookbook = async (cookbookId: string) => {
+    if (!user) {
+      // Guest mode: remove from local storage
+      setGuestCookbooks(prev => prev.filter(cb => cb.id !== cookbookId));
+      setGuestRecipes(prev => prev.filter(recipe => recipe.cookbook_id !== cookbookId));
+      if (selectedCookbook?.id === cookbookId) {
+        setSelectedCookbook(null); // Deselect if the deleted one was selected
+      }
+      return;
+    }
+
+    try {
+      // First, delete all recipes associated with this cookbook
+      const { error: deleteRecipesError } = await supabase
+        .from('recipes')
+        .delete()
+        .eq('cookbook_id', cookbookId)
+        .eq('user_id', user.id); // Ensure user owns the recipes
+
+      if (deleteRecipesError) {
+        console.error('Error deleting recipes for cookbook:', deleteRecipesError);
+        throw deleteRecipesError;
+      }
+
+      // Then, delete the cookbook itself
+      const { error: deleteCookbookError } = await supabase
+        .from('cookbooks')
+        .delete()
+        .eq('id', cookbookId)
+        .eq('user_id', user.id); // Ensure user owns the cookbook
+
+      if (deleteCookbookError) {
+        console.error('Error deleting cookbook:', deleteCookbookError);
+        throw deleteCookbookError;
+      }
+
+      setCookbooks(prev => prev.filter(cb => cb.id !== cookbookId));
+      if (selectedCookbook?.id === cookbookId) {
+        setSelectedCookbook(null); // Deselect if the deleted one was selected
+      }
+      queryClient.invalidateQueries({ queryKey: ['cookbooks', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['recipes', user.id, cookbookId] }); // Invalidate recipes for this cookbook
+    } catch (error) {
+      console.error('Delete cookbook error:', error);
+      throw error;
+    }
+  };
+
   const addFriend = async (email: string) => {
     if (!user) {
       throw new Error('You must be logged in to send friend requests.');
@@ -742,6 +792,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createCookbook,
         updateUserProfile, // Added
         updateCookbookPrivacy, // Added
+        deleteCookbook, // Added
         addFriend,
         removeFriend,
         acceptFriendRequest,
