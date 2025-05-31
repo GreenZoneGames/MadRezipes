@@ -589,11 +589,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         throw sourceRecipesError;
       }
 
-      // 2. Create a new cookbook for the current user
+      // 2. Determine a unique name for the new cookbook
+      let finalNewName = newName;
+      let suffix = 0;
+      let nameExists = true;
+
+      while (nameExists) {
+        const { data: existingCookbook, error: fetchError } = await supabase
+          .from('cookbooks')
+          .select('id')
+          .eq('user_id', user.id)
+          .ilike('name', finalNewName)
+          .single();
+
+        if (fetchError && fetchError.code === 'PGRST116') { // No rows found, name is unique
+          nameExists = false;
+        } else if (existingCookbook) { // Name exists, try another suffix
+          suffix++;
+          finalNewName = `${newName} (Copy ${suffix})`;
+        } else { // Other error
+          throw fetchError;
+        }
+      }
+
+      // 3. Create a new cookbook for the current user with the unique name
       const { data: newCookbook, error: newCookbookError } = await supabase
         .from('cookbooks')
         .insert({
-          name: newName,
+          name: finalNewName,
           description: sourceCookbook.description,
           user_id: user.id,
           is_public: isPublic,
@@ -605,7 +628,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         throw newCookbookError;
       }
 
-      // 3. Copy recipes to the new cookbook
+      // 4. Copy recipes to the new cookbook
       if (sourceRecipes && sourceRecipes.length > 0) {
         const recipesToInsert = sourceRecipes.map(recipe => ({
           user_id: user.id,
@@ -632,7 +655,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
 
-      // 4. Update local state and invalidate queries
+      // 5. Update local state and invalidate queries
       setCookbooks(prev => [...prev, newCookbook]);
       setSelectedCookbook(newCookbook); // Select the newly copied cookbook
       queryClient.invalidateQueries({ queryKey: ['cookbooks', user.id] });
@@ -640,7 +663,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       toast({
         title: 'Cookbook Copied!',
-        description: `"${sourceCookbook.name}" has been copied to your cookbooks as "${newName}".`,
+        description: `"${sourceCookbook.name}" has been copied to your cookbooks as "${finalNewName}".`,
       });
 
     } catch (error: any) {
