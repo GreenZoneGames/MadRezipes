@@ -63,7 +63,7 @@ interface Cookbook {
 
 interface CookbookManagerProps {
   onRecipeRemoved: (id: string) => void;
-  setActiveTab: (tab: string) => void;
+  setActiveTab: (tab: string) => void; // Ensure this prop is typed
 }
 
 const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setActiveTab }) => {
@@ -92,6 +92,14 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   const [isCopyingCookbook, setIsCopyingCookbook] = useState(false);
 
   const [selectedCookbookIds, setSelectedCookbookIds] = useState<Set<string>>(new Set());
+
+  // Debugging: Log setActiveTab when component renders
+  useEffect(() => {
+    console.log('CookbookManager: setActiveTab prop type:', typeof setActiveTab);
+    if (typeof setActiveTab !== 'function') {
+      console.error('CookbookManager: setActiveTab is NOT a function!', setActiveTab);
+    }
+  }, [setActiveTab]);
 
   const uniqueCookbooks = Array.from(new Map(
     (user ? cookbooks : guestCookbooks).map(cb => [cb.id, cb])
@@ -354,11 +362,21 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   const handlePlanWithCookbook = () => {
     if (currentSelectedCookbook) {
       setSelectedCookbook(currentSelectedCookbook);
-      setActiveTab('planner');
-      toast({
-        title: 'Switched to Meal Planner',
-        description: `Now planning meals with "${currentSelectedCookbook.name}".`
-      });
+      // Ensure setActiveTab is a function before calling it
+      if (typeof setActiveTab === 'function') {
+        setActiveTab('planner');
+        toast({
+          title: 'Switched to Meal Planner',
+          description: `Now planning meals with "${currentSelectedCookbook.name}".`
+        });
+      } else {
+        console.error('setActiveTab is not a function, cannot switch tab.');
+        toast({
+          title: 'Error',
+          description: 'Could not switch to Meal Planner tab. Please try refreshing the page.',
+          variant: 'destructive'
+        });
+      }
     } else {
       toast({
         title: 'No Cookbook Selected',

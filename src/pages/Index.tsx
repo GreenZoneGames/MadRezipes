@@ -12,7 +12,7 @@ import FriendsList from '@/components/FriendsList';
 import ManualRecipeForm from '@/components/ManualRecipeForm';
 import DirectMessageWindow from '@/components/DirectMessageWindow';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import CookbookManager from '@/components/CookbookManager'; // Ensure this import is correct
+import CookbookManager from '@/components/CookbookManager';
 
 interface CategorizedIngredients {
   proteins: string[];
