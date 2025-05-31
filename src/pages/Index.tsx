@@ -125,7 +125,7 @@ const Index = () => {
                   
                   <div className="space-y-6">
                     <ShoppingList 
-                      recipes={recipes}
+                      recipes={recipes} // Keep recipes prop for now, as it's used for non-meal-plan lists
                       onShoppingListChange={handleShoppingListChange}
                       mealPlan={mealPlan}
                     />

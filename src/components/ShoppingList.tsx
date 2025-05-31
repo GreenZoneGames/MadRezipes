@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ShoppingCart, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { MealPlan as MealPlanType, Recipe } from './MealPlanner'; // Import MealPlanType and Recipe from MealPlanner
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -14,35 +15,14 @@ interface CategorizedIngredients {
   other: string[];
 }
 
-interface Recipe {
-  id: string;
-  title: string;
-  ingredients: string[];
-  categorized_ingredients?: CategorizedIngredients; // Changed to snake_case
-  instructions: string[];
-  url: string;
-  image?: string;
-  cook_time?: string; // Changed to snake_case
-  servings?: number;
-  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
-}
-
-interface MealPlan {
-  id: string;
-  date: string;
-  mealType: string;
-  recipeId: string;
-  servings?: number;
-}
-
 interface ShoppingListProps {
-  recipes: Recipe[];
+  recipes: Recipe[]; // Keep recipes prop for non-meal-plan based lists
   onShoppingListChange?: (ingredients: string[]) => void;
-  mealPlan?: MealPlan[];
+  mealPlan?: MealPlanType[]; // Use the imported type
 }
 
 const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChange, mealPlan = [] }) => {
-  const [checkedItems, setCheckedItems] = useState(new Set<string>()); // Corrected initialization
+  const [checkedItems, setCheckedItems] = useState(new Set<string>());
   const [showByCategory, setShowByCategory] = useState(true);
 
   const calculateIngredientsWithServings = () => {
@@ -51,10 +31,10 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
     
     if (mealPlan.length > 0) {
       mealPlan.forEach(meal => {
-        const recipe = recipes.find(r => r.id === meal.recipeId);
+        const recipe = meal.recipe; // Directly use meal.recipe
         if (recipe) {
-          const servingMultiplier = meal.servings && recipe.servings 
-            ? meal.servings / recipe.servings 
+          const servingMultiplier = meal.recipe.servings && recipe.servings 
+            ? meal.recipe.servings / recipe.servings 
             : 1;
           
           recipe.ingredients.forEach(ingredient => {
@@ -62,8 +42,8 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
             const currentAmount = ingredientMap.get(key) || 0;
             ingredientMap.set(key, currentAmount + servingMultiplier);
             
-            if (recipe.categorized_ingredients) { // Changed to snake_case
-              for (const [category, items] of Object.entries(recipe.categorized_ingredients)) { // Changed to snake_case
+            if (recipe.categorized_ingredients) {
+              for (const [category, items] of Object.entries(recipe.categorized_ingredients)) {
                 if (items.some(item => item.toLowerCase().trim() === key)) {
                   categoryMap.set(key, category);
                   break;
@@ -80,8 +60,8 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
           const currentAmount = ingredientMap.get(key) || 0;
           ingredientMap.set(key, currentAmount + 1);
           
-          if (recipe.categorized_ingredients) { // Changed to snake_case
-            for (const [category, items] of Object.entries(recipe.categorized_ingredients)) { // Changed to snake_case
+          if (recipe.categorized_ingredients) {
+            for (const [category, items] of Object.entries(recipe.categorized_ingredients)) {
               if (items.some(item => item.toLowerCase().trim() === key)) {
                 categoryMap.set(key, category);
                 break;
@@ -166,7 +146,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
     return '🥄';
   };
 
-  if (recipes.length === 0) {
+  if (recipes.length === 0 && mealPlan.length === 0) { // Adjusted condition
     return (
       <Card className="w-full hover-lift bg-card/50 backdrop-blur-sm border-border/50">
         <CardHeader>
@@ -179,7 +159,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
           <div className="text-center py-8 bg-gradient-to-br from-orange-50/30 to-red-50/30 rounded-lg border border-dashed border-orange-200">
             <ShoppingCart className="h-12 w-12 text-orange-400 mx-auto mb-2" />
             <p className="text-muted-foreground animate-fade-in">
-              🍳 Add some delicious recipes to generate your shopping list!
+              🍳 Add some delicious recipes or plan meals to generate your shopping list!
             </p>
           </div>
         </CardContent>

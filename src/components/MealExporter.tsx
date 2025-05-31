@@ -3,28 +3,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, Calendar, ShoppingCart } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-
-interface Recipe {
-  id: string;
-  title: string;
-  ingredients: string[];
-  instructions: string[];
-  url: string;
-  image?: string;
-  cook_time?: string; // Changed to snake_case
-  servings?: number;
-  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
-}
-
-interface MealPlan {
-  date: string;
-  recipe: Recipe;
-  mealType?: 'breakfast' | 'lunch' | 'dinner';
-}
+import { MealPlan as MealPlanType, Recipe } from './MealPlanner'; // Import MealPlanType and Recipe from MealPlanner
 
 interface MealExporterProps {
   recipes: Recipe[];
-  mealPlan: MealPlan[];
+  mealPlan: MealPlanType[];
 }
 
 const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
@@ -47,7 +30,7 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
     const month = currentDate.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     
-    const fullMonthPlan: MealPlan[] = [];
+    const fullMonthPlan: MealPlanType[] = [];
     const mealTypes: ('breakfast' | 'lunch' | 'dinner')[] = ['breakfast', 'lunch', 'dinner'];
     
     for (let day = 1; day <= daysInMonth; day++) {
@@ -116,7 +99,6 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
       
       // Draw calendar grid and meals
       doc.setTextColor(255, 255, 255);
-      doc.setFontSize(6);
       
       const year = currentDate.getFullYear();
       const month = currentDate.getMonth();
@@ -142,18 +124,22 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
             const dayMeals = fullMonthPlan.filter(m => m.date === dateStr);
             
             let mealY = y + 10;
-            dayMeals.forEach(meal => {
-              if (mealY < y + cellHeight - 2) {
-                doc.setFontSize(5);
-                doc.setTextColor(134, 239, 172);
-                const icon = getMealIcon(meal.mealType || 'dinner');
-                const mealTitle = meal.recipe.title.length > 12 ? 
-                  meal.recipe.title.substring(0, 12) + '...' : meal.recipe.title;
+            const mealTypesForDisplay: ('breakfast' | 'lunch' | 'dinner')[] = ['breakfast', 'lunch', 'dinner'];
+
+            mealTypesForDisplay.forEach(type => {
+              const meal = dayMeals.find(m => m.mealType === type);
+              const icon = getMealIcon(type);
+              const mealTitle = meal ? (meal.recipe.title.length > 15 ? meal.recipe.title.substring(0, 15) + '...' : meal.recipe.title) : 'No meal';
+              const textColor = meal ? [134, 239, 172] : [150, 150, 150]; // Green for planned, gray for none
+
+              if (mealY < y + cellHeight - 2) { // Check if space is available
+                doc.setFontSize(6); // Slightly larger font for readability
+                doc.setTextColor(...textColor);
                 doc.text(`${icon} ${mealTitle}`, x + 1, mealY);
-                mealY += 4;
+                mealY += 4; // Increment Y for next meal type
               }
             });
-            doc.setTextColor(255, 255, 255);
+            doc.setTextColor(255, 255, 255); // Reset color
           }
         }
       }
