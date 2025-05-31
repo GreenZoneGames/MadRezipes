@@ -133,7 +133,7 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
               const textColor = meal ? [134, 239, 172] : [150, 150, 150]; // Green for planned, gray for none
 
               if (mealY < y + cellHeight - 2) { // Check if space is available
-                doc.setFontSize(6); // Slightly larger font for readability
+                doc.setFontSize(7); // Increased font size for readability
                 doc.setTextColor(...textColor);
                 doc.text(`${icon} ${mealTitle}`, x + 1, mealY);
                 mealY += 4; // Increment Y for next meal type
