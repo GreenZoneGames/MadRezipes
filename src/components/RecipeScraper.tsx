@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ChefHat, Plus, Utensils, CheckCircle } from 'lucide-react';
+import { Loader2, ChefHat, Plus, Utensils, CheckCircle, BookOpen } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/lib/supabase'; // Import supabase client
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useAppContext } from '@/contexts/AppContext';
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -29,6 +32,7 @@ interface Recipe {
   cookTime?: string;
   servings?: number;
   mealType?: string;
+  cookbookId?: string; // Added cookbookId
 }
 
 interface RecipeScraperProps {
@@ -36,10 +40,15 @@ interface RecipeScraperProps {
 }
 
 const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
+  const { user, cookbooks, createCookbook, addRecipeToCookbook } = useAppContext();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [scrapedRecipes, setScrapedRecipes] = useState<Recipe[]>([]);
   const [selectedRecipes, setSelectedRecipes] = useState<Set<string>>(new Set());
+  const [showCookbookDialog, setShowCookbookDialog] = useState(false);
+  const [selectedCookbookId, setSelectedCookbookId] = useState('');
+  const [newCookbookName, setNewCookbookName] = useState('');
+  const [creatingCookbook, setCreatingCookbook] = useState(false);
 
   const handleScrape = async () => {
     if (!url.trim()) {
@@ -55,8 +64,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
     setSelectedRecipes(new Set());
     
     try {
-      // Use supabase.functions.invoke with the function name
-      const { data, error } = await supabase.functions.invoke('scrape-recipe', { // Changed from ID to name
+      const { data, error } = await supabase.functions.invoke('scrape-recipe', {
         method: 'POST',
         body: { url }
       });
@@ -66,7 +74,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
         throw new Error(error.message);
       }
       
-      if (data.error) { // Assuming the function itself might return an error object in its payload
+      if (data.error) {
         throw new Error(data.error);
       }
       
@@ -110,13 +118,58 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
     setSelectedRecipes(newSelected);
   };
 
-  const addSelectedRecipes = () => {
-    const recipesToAdd = scrapedRecipes.filter(recipe => selectedRecipes.has(recipe.id));
-    recipesToAdd.forEach(recipe => onRecipeAdded(recipe));
-    
-    setScrapedRecipes([]);
-    setSelectedRecipes(new Set());
-    setUrl('');
+  const handleAddSelectedToCookbook = async () => {
+    if (!user) {
+      toast({ title: 'Authentication Required', description: 'Please sign in to add recipes to a cookbook.', variant: 'destructive' });
+      return;
+    }
+    if (!selectedCookbookId) {
+      toast({ title: 'Cookbook Required', description: 'Please select a cookbook.', variant: 'destructive' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const recipesToAdd = scrapedRecipes.filter(recipe => selectedRecipes.has(recipe.id));
+      for (const recipe of recipesToAdd) {
+        await addRecipeToCookbook(recipe, selectedCookbookId);
+        onRecipeAdded({ ...recipe, cookbookId: selectedCookbookId }); // Update local state with cookbookId
+      }
+      
+      toast({
+        title: 'Recipes Added!',
+        description: `${recipesToAdd.length} recipe(s) added to your cookbook.`
+      });
+      setScrapedRecipes([]);
+      setSelectedRecipes(new Set());
+      setUrl('');
+      setShowCookbookDialog(false);
+    } catch (error: any) {
+      toast({
+        title: 'Failed to Add Recipes',
+        description: error.message || 'An error occurred while adding recipes to the cookbook.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateNewCookbook = async () => {
+    if (!newCookbookName.trim()) {
+      toast({ title: 'Name Required', description: 'Please enter a name for the new cookbook.', variant: 'destructive' });
+      return;
+    }
+    setCreatingCookbook(true);
+    try {
+      await createCookbook(newCookbookName.trim());
+      setNewCookbookName('');
+      toast({ title: 'Cookbook Created!', description: `"${newCookbookName}" has been created.` });
+    } catch (error: any) {
+      toast({ title: 'Creation Failed', description: error.message || 'Failed to create cookbook.', variant: 'destructive' });
+    } finally {
+      setCreatingCookbook(false);
+    }
   };
 
   const selectAll = () => {
@@ -196,13 +249,61 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                   {selectedRecipes.size === scrapedRecipes.length ? 'Deselect All' : 'Select All'}
                 </Button>
                 {selectedRecipes.size > 0 && (
-                  <Button
-                    onClick={addSelectedRecipes}
-                    className="bg-gradient-to-r from-green-500 to-emerald-500"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add {selectedRecipes.size} Recipe{selectedRecipes.size > 1 ? 's' : ''}
-                  </Button>
+                  <Dialog open={showCookbookDialog} onOpenChange={setShowCookbookDialog}>
+                    <DialogTrigger asChild>
+                      <Button
+                        className="bg-gradient-to-r from-green-500 to-emerald-500"
+                        disabled={!user}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add {selectedRecipes.size} Recipe{selectedRecipes.size > 1 ? 's' : ''}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <BookOpen className="h-5 w-5" />
+                          Add to Cookbook
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        {cookbooks.length > 0 ? (
+                          <Select value={selectedCookbookId} onValueChange={setSelectedCookbookId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select an existing cookbook" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {cookbooks.map(cb => (
+                                <SelectItem key={cb.id} value={cb.id}>{cb.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No cookbooks found. Create one below!</p>
+                        )}
+                        
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="Or create new cookbook"
+                            value={newCookbookName}
+                            onChange={(e) => setNewCookbookName(e.target.value)}
+                            disabled={creatingCookbook}
+                          />
+                          <Button onClick={handleCreateNewCookbook} disabled={creatingCookbook}>
+                            {creatingCookbook ? 'Creating...' : 'Create'}
+                          </Button>
+                        </div>
+
+                        <Button 
+                          onClick={handleAddSelectedToCookbook} 
+                          disabled={loading || !selectedCookbookId} 
+                          className="w-full"
+                        >
+                          {loading ? 'Adding...' : `Add ${selectedRecipes.size} to Cookbook`}
+                        </Button>
+                      </div>
+                    </DialogContent>
+                  </Dialog>
                 )}
               </div>
             </CardTitle>

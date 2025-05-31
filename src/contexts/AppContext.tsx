@@ -20,6 +20,30 @@ interface Friend {
   status: 'pending' | 'accepted';
 }
 
+interface CategorizedIngredients {
+  proteins: string[];
+  vegetables: string[];
+  fruits: string[];
+  grains: string[];
+  dairy: string[];
+  spices: string[];
+  other: string[];
+}
+
+interface Recipe {
+  id: string;
+  title: string;
+  ingredients: string[];
+  categorizedIngredients?: CategorizedIngredients;
+  instructions: string[];
+  url: string;
+  image?: string;
+  cookTime?: string;
+  servings?: number;
+  mealType?: string;
+  cookbookId?: string; // Added cookbookId
+}
+
 interface AppContextType {
   sidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -35,6 +59,7 @@ interface AppContextType {
   addFriend: (email: string) => Promise<void>;
   removeFriend: (friendId: string) => Promise<void>;
   shareRecipe: (recipeId: string, friendId: string) => Promise<void>;
+  addRecipeToCookbook: (recipe: Recipe, cookbookId: string) => Promise<void>; // New function
 }
 
 const defaultAppContext: AppContextType = {
@@ -52,6 +77,7 @@ const defaultAppContext: AppContextType = {
   addFriend: async () => {},
   removeFriend: async () => {},
   shareRecipe: async () => {},
+  addRecipeToCookbook: async () => {}, // Default for new function
 };
 
 const AppContext = createContext<AppContextType>(defaultAppContext);
@@ -251,6 +277,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const addRecipeToCookbook = async (recipe: Recipe, cookbookId: string) => {
+    if (!user) throw new Error('User not authenticated.');
+    
+    try {
+      const { data, error } = await supabase
+        .from('recipes')
+        .insert({
+          user_id: user.id,
+          cookbook_id: cookbookId,
+          title: recipe.title,
+          ingredients: recipe.ingredients,
+          instructions: recipe.instructions,
+          url: recipe.url,
+          image: recipe.image,
+          cook_time: recipe.cookTime,
+          servings: recipe.servings,
+          meal_type: recipe.mealType,
+          categorized_ingredients: recipe.categorizedIngredients,
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      console.log('Recipe added to cookbook:', data);
+    } catch (error) {
+      console.error('Error adding recipe to cookbook:', error);
+      throw error;
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -268,6 +324,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addFriend,
         removeFriend,
         shareRecipe,
+        addRecipeToCookbook,
       }}
     >
       {children}

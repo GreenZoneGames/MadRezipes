@@ -11,16 +11,28 @@ import MealExporter from '@/components/MealExporter';
 import CommunityFunctions from '@/components/CommunityFunctions';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
+interface CategorizedIngredients {
+  proteins: string[];
+  vegetables: string[];
+  fruits: string[];
+  grains: string[];
+  dairy: string[];
+  spices: string[];
+  other: string[];
+}
+
 interface Recipe {
   id: string;
   title: string;
   ingredients: string[];
+  categorizedIngredients?: CategorizedIngredients;
   instructions: string[];
   url: string;
   image?: string;
   cookTime?: string;
   servings?: number;
   mealType?: string;
+  cookbookId?: string; // Added cookbookId
 }
 
 const Index = () => {
@@ -30,7 +42,13 @@ const Index = () => {
   const [selectedMonth, setSelectedMonth] = useState<string>('');
 
   const handleRecipeAdded = (recipe: Recipe) => {
-    setRecipes(prev => [...prev, recipe]);
+    setRecipes(prev => {
+      // Prevent adding duplicates if recipe already exists by ID
+      if (prev.some(r => r.id === recipe.id)) {
+        return prev;
+      }
+      return [...prev, recipe];
+    });
   };
 
   const handleRecipeRemoved = (id: string) => {
@@ -92,7 +110,7 @@ const Index = () => {
                       mealPlan={mealPlan}
                       selectedMonth={selectedMonth}
                     />
-                    <MealExporter mealPlan={mealPlan} />
+                    <MealExporter recipes={recipes} mealPlan={mealPlan} />
                   </div>
                 </div>
               </TabsContent>
@@ -114,6 +132,7 @@ const Index = () => {
                           key={recipe.id}
                           recipe={recipe}
                           onRemove={handleRecipeRemoved}
+                          onRecipeAdded={handleRecipeAdded} // Pass onRecipeAdded to RecipeCard
                         />
                       ))}
                     </div>
