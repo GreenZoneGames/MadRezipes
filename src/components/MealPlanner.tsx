@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shuffle, ChefHat } from 'lucide-react';
+import { Shuffle, ChefHat, BookOpen, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import MealCalendar from './MealCalendar';
+import { useAppContext } from '@/contexts/AppContext'; // Import useAppContext
+import { useQuery } from '@tanstack/react-query'; // Import useQuery
+import { supabase } from '@/lib/supabase'; // Import supabase
 
 interface Recipe {
   id: string;
@@ -25,18 +28,17 @@ export interface MealPlan {
 }
 
 interface MealPlannerProps {
-  recipes: Recipe[];
   onMealPlanChange: (mealPlan: MealPlan[]) => void;
   availableIngredients: string[];
   onRecipeGenerated: (recipe: Recipe) => void;
 }
 
 const MealPlanner: React.FC<MealPlannerProps> = ({ 
-  recipes, 
   onMealPlanChange, 
   availableIngredients, 
   onRecipeGenerated 
 }) => {
+  const { user, selectedCookbook, guestRecipes } = useAppContext(); // Get selectedCookbook and guestRecipes
   const [selectedMonth, setSelectedMonth] = useState<string>('');
   const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
   const [generatingRecipe, setGeneratingRecipe] = useState(false);
@@ -48,11 +50,36 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
 
   const mealTypes: ('breakfast' | 'lunch' | 'dinner')[] = ['breakfast', 'lunch', 'dinner']; // These are the daily slots
 
+  // Fetch recipes for the selected cookbook
+  const { data: dbRecipes, isLoading: isLoadingDbRecipes } = useQuery<Recipe[]>({
+    queryKey: ['recipes', user?.id, selectedCookbook?.id],
+    queryFn: async () => {
+      if (!user || !selectedCookbook || selectedCookbook.user_id === 'guest') return [];
+      const { data, error } = await supabase
+        .from('recipes')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('cookbook_id', selectedCookbook.id);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!user && !!selectedCookbook && selectedCookbook.user_id !== 'guest',
+  });
+
+  // Determine the recipes to use for planning based on selected cookbook
+  const recipesToPlan = useMemo(() => {
+    if (!selectedCookbook) return [];
+    if (selectedCookbook.user_id === 'guest') {
+      return guestRecipes.filter(r => r.cookbook_id === selectedCookbook.id);
+    }
+    return dbRecipes || [];
+  }, [selectedCookbook, guestRecipes, dbRecipes]);
+
   const generateRandomPlan = () => {
-    if (recipes.length === 0 || !selectedMonth) {
+    if (recipesToPlan.length === 0 || !selectedMonth) {
       toast({ 
         title: '🍽️ No Recipes Available', 
-        description: 'Please add some recipes first to generate a meal plan!',
+        description: 'Please select a cookbook with recipes or add some recipes first to generate a meal plan!',
         variant: 'destructive'
       });
       return;
@@ -68,7 +95,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
     for (let day = 1; day <= daysInMonth; day++) {
       mealTypes.forEach(mealType => {
         // Try to find a recipe matching the meal type
-        const matchingRecipes = recipes.filter(r => 
+        const matchingRecipes = recipesToPlan.filter(r => 
           r.meal_type?.toLowerCase() === mealType.toLowerCase()
         );
         
@@ -77,7 +104,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
           selectedRecipe = matchingRecipes[Math.floor(Math.random() * matchingRecipes.length)];
         } else {
           // Fallback to any random recipe if no specific meal type match
-          selectedRecipe = recipes[Math.floor(Math.random() * recipes.length)];
+          selectedRecipe = recipesToPlan[Math.floor(Math.random() * recipesToPlan.length)];
         }
 
         const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -161,6 +188,8 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
     }
   };
 
+  const isLoadingRecipes = user && selectedCookbook?.user_id !== 'guest' ? isLoadingDbRecipes : false;
+
   return (
     <div className="space-y-4">
       <Card className="w-full hover-lift bg-card/50 backdrop-blur-sm border-border/50 animate-slide-up">
@@ -175,28 +204,49 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="flex-1 bg-background/50 border-border/50">
-                  <SelectValue placeholder="📅 Select month" />
-                </SelectTrigger>
-                <SelectContent>
-                  {months.map(month => (
-                    <SelectItem key={month} value={month}>
-                      {month}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button 
-                onClick={generateRandomPlan}
-                disabled={recipes.length === 0 || !selectedMonth}
-                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white hover-lift transition-all duration-300"
-              >
-                <Shuffle className="h-4 w-4 mr-1" />
-                🎲 Generate Full Month
-              </Button>
-            </div>
+            {!selectedCookbook ? (
+              <div className="text-center py-6 bg-gradient-to-br from-blue-50/30 to-purple-50/30 rounded-lg border border-dashed border-blue-200">
+                <BookOpen className="h-12 w-12 text-blue-400 mx-auto mb-2" />
+                <p className="text-muted-foreground">
+                  Please select a cookbook from "My Cookbooks" to start planning meals.
+                </p>
+              </div>
+            ) : isLoadingRecipes ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                Loading recipes from cookbook...
+              </div>
+            ) : recipesToPlan.length === 0 ? (
+              <div className="text-center py-6 bg-gradient-to-br from-orange-50/30 to-red-50/30 rounded-lg border border-dashed border-orange-200">
+                <ChefHat className="h-12 w-12 text-orange-400 mx-auto mb-2" />
+                <p className="text-muted-foreground">
+                  The selected cookbook has no recipes. Add some to start meal planning!
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                  <SelectTrigger className="flex-1 bg-background/50 border-border/50">
+                    <SelectValue placeholder="📅 Select month" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {months.map(month => (
+                      <SelectItem key={month} value={month}>
+                        {month}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={generateRandomPlan}
+                  disabled={!selectedMonth || recipesToPlan.length === 0}
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white hover-lift transition-all duration-300"
+                >
+                  <Shuffle className="h-4 w-4 mr-1" />
+                  🎲 Generate Full Month
+                </Button>
+              </div>
+            )}
 
             <div className="flex justify-center">
               <Button 
@@ -217,15 +267,6 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
                 )}
               </Button>
             </div>
-
-            {recipes.length === 0 && (
-              <div className="text-center py-6 bg-gradient-to-br from-orange-50/30 to-red-50/30 rounded-lg border border-dashed border-orange-200">
-                <ChefHat className="h-12 w-12 text-orange-400 mx-auto mb-2" />
-                <p className="text-muted-foreground">
-                  🍳 Add some delicious recipes to start meal planning!
-                </p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>

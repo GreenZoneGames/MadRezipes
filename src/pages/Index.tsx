@@ -117,7 +117,6 @@ const Index = () => {
                   <div className="space-y-6">
                     <RecipeScraper onRecipeAdded={handleRecipeAdded} />
                     <MealPlanner 
-                      recipes={recipes}
                       onMealPlanChange={handleMealPlanChange}
                       availableIngredients={availableIngredients}
                       onRecipeGenerated={handleRecipeAdded}
