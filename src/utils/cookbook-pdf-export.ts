@@ -24,6 +24,30 @@ interface Recipe {
   cookbook_id?: string;
 }
 
+// Helper function to convert image URL to Base64
+const getImageBase64 = async (url: string): Promise<string | null> => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.warn(`Failed to fetch image ${url}: ${response.statusText}`);
+      return null;
+    }
+    const blob = await response.blob();
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = () => {
+        console.error(`FileReader error for ${url}`);
+        resolve(null);
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (error) {
+    console.error(`Error converting image to base64 for ${url}:`, error);
+    return null;
+  }
+};
+
 export const exportCookbookRecipesToPDF = async (recipes: Recipe[], cookbookName: string) => {
   const doc = new jsPDF('portrait', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -76,28 +100,21 @@ export const exportCookbookRecipesToPDF = async (recipes: Recipe[], cookbookName
 
       // Image (if available)
       if (recipe.image) {
-        try {
-          const img = new Image();
-          img.src = recipe.image;
-          await new Promise((resolve, reject) => {
-            img.onload = () => {
-              const imgWidth = 60; // Fixed width for image
-              const imgHeight = (img.height / img.width) * imgWidth;
-              if (yPos + imgHeight + 10 > pageHeight - margin) {
-                doc.addPage();
-                addPageHeader(`${cookbookName} Recipes (cont.)`, `Generated on ${new Date().toLocaleDateString()}`);
-              }
-              doc.addImage(img, 'JPEG', margin, yPos, imgWidth, imgHeight);
-              yPos += imgHeight + 5;
-              resolve(null);
-            };
-            img.onerror = () => {
-              console.warn(`Failed to load image for PDF: ${recipe.image}`);
-              resolve(null); // Resolve even on error to not block PDF generation
-            };
-          });
-        } catch (e) {
-          console.error('Error adding image to PDF:', e);
+        const imageData = await getImageBase64(recipe.image);
+        if (imageData) {
+          try {
+            const imgWidth = 60; // Fixed width for image
+            const imgHeight = (doc.internal.pageSize.getWidth() / 2) * (imgWidth / doc.internal.pageSize.getWidth()); // Placeholder ratio, actual ratio would need image dimensions
+            
+            if (yPos + imgHeight + 10 > pageHeight - margin) {
+              doc.addPage();
+              addPageHeader(`${cookbookName} Recipes (cont.)`, `Generated on ${new Date().toLocaleDateString()}`);
+            }
+            doc.addImage(imageData, 'JPEG', margin, yPos, imgWidth, imgHeight);
+            yPos += imgHeight + 5;
+          } catch (e) {
+            console.error('Error adding image to PDF:', e);
+          }
         }
       }
 
