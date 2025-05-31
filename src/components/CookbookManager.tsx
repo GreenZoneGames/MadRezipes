@@ -663,8 +663,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
           {selectedRecipeForDetails && (
             <RecipeCard 
               recipe={selectedRecipeForDetails} 
-              // Pass onAddToShoppingList if needed, or remove if not applicable in this context
-              // onAddToShoppingList={onAddToShoppingList} 
+              showFullDetails={true} // Pass this to show full details
             />
           )}
         </DialogContent>

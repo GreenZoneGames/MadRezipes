@@ -38,13 +38,16 @@ interface RecipeCardProps {
   recipe: Recipe;
   onAddToShoppingList?: (ingredients: string[]) => void;
   onRecipeAdded?: (recipe: Recipe) => void; // Added for consistency if needed
+  showFullDetails?: boolean; // New prop to control full details display
 }
 
-const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, onRecipeAdded }) => {
+const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, onRecipeAdded, showFullDetails = false }) => {
   const { user, cookbooks, guestCookbooks, createCookbook, addRecipeToCookbook } = useAppContext();
   const [showCookbookDialog, setShowCookbookDialog] = useState(false);
   const [selectedCookbookId, setSelectedCookbookId] = useState('');
   const [newCookbookName, setNewCookbookName] = useState('');
+  const [newCookbookDescription, setNewCookbookDescription] = useState(''); // Added for new cookbook
+  const [newCookbookIsPublic, setNewCookbookIsPublic] = useState(false); // Added for new cookbook
   const [creatingCookbook, setCreatingCookbook] = useState(false);
   const [addingRecipe, setAddingRecipe] = useState(false);
 
@@ -110,8 +113,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
     }
     setCreatingCookbook(true);
     try {
-      const newCookbook = await createCookbook(newCookbookName.trim());
+      const newCookbook = await createCookbook(newCookbookName.trim(), newCookbookDescription.trim(), newCookbookIsPublic);
       setNewCookbookName('');
+      setNewCookbookDescription('');
+      setNewCookbookIsPublic(false); // Reset public state
       toast({ title: 'Cookbook Created!', description: `"${newCookbookName}" has been created.` });
       if (newCookbook) {
         setSelectedCookbookId(newCookbook.id); // Automatically select the new cookbook
@@ -272,8 +277,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
                       {category.charAt(0).toUpperCase() + category.slice(1)} ({items.length})
                     </div>
                     <div className="ml-2 text-muted-foreground">
-                      {items.slice(0, 3).join(', ')}
-                      {items.length > 3 && ` +${items.length - 3} more`}
+                      {showFullDetails ? items.join(', ') : items.slice(0, 3).join(', ')}
+                      {!showFullDetails && items.length > 3 && ` +${items.length - 3} more`}
                     </div>
                   </div>
                 );
@@ -282,6 +287,27 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
           </div>
         )}
         
+        {showFullDetails && (
+          <div className="space-y-4 mt-4">
+            <div>
+              <h4 className="font-semibold mb-2 text-sm">📝 All Ingredients:</h4>
+              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
+                {recipe.ingredients.map((ingredient, index) => (
+                  <li key={index}>{ingredient}</li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-2 text-sm">🪜 Instructions:</h4>
+              <ol className="list-decimal list-inside text-sm text-muted-foreground space-y-1">
+                {recipe.instructions.map((instruction, index) => (
+                  <li key={index}>{instruction}</li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        )}
+
         <div className="flex gap-2 mt-4">
           <Button
             variant="outline"

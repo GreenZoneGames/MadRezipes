@@ -7,6 +7,7 @@ import { User, Clock, ChefHat, Reply, Send } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
+import RecipeCard from './RecipeCard'; // Import RecipeCard
 
 interface Message {
   id: string;
@@ -30,7 +31,7 @@ interface ThreadedMessageProps {
 }
 
 const ThreadedMessage: React.FC<ThreadedMessageProps> = ({ message, onReply, depth = 0 }) => {
-  const { user } = useAppContext();
+  const { user, addRecipeToCookbook } = useAppContext(); // Destructure addRecipeToCookbook
   const [showReply, setShowReply] = useState(false);
   const [replyContent, setReplyContent] = useState('');
   const [loading, setLoading] = useState(false);
@@ -58,11 +59,41 @@ const ThreadedMessage: React.FC<ThreadedMessageProps> = ({ message, onReply, dep
     }
   };
 
-  const addRecipeToCollection = (recipe: any) => {
-    toast({
-      title: 'Recipe Added!',
-      description: `${recipe.title} has been added to your collection.`
-    });
+  const handleAddRecipeToCollection = async (recipe: any) => {
+    if (!user) {
+      toast({
+        title: 'Sign In Required',
+        description: 'Please sign in to add recipes to your collection.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    try {
+      // Assuming a default cookbook or prompting user to select one.
+      // For simplicity, let's assume the user has at least one cookbook or we create a default.
+      // In a real app, you might open a dialog to select a cookbook.
+      // For now, we'll just add it to the currently selected cookbook or the first available.
+      const defaultCookbook = user ? useAppContext().cookbooks[0] : useAppContext().guestCookbooks[0];
+      if (!defaultCookbook) {
+        toast({
+          title: 'No Cookbook Available',
+          description: 'Please create a cookbook first to save this recipe.',
+          variant: 'destructive'
+        });
+        return;
+      }
+      await addRecipeToCookbook(recipe, defaultCookbook.id);
+      toast({
+        title: 'Recipe Added!',
+        description: `${recipe.title} has been added to your collection.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Failed to Add Recipe',
+        description: error.message || 'An error occurred while adding the recipe.',
+        variant: 'destructive'
+      });
+    }
   };
 
   return (
@@ -84,26 +115,18 @@ const ThreadedMessage: React.FC<ThreadedMessageProps> = ({ message, onReply, dep
         <CardContent>
           {message.message_type === 'recipe' && message.recipe_data ? (
             <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
                 <ChefHat className="h-4 w-4" />
                 Recipe Suggestion
               </div>
-              <div className="border rounded-lg p-3 bg-orange-50/50">
-                <h4 className="font-semibold">{message.recipe_data.title}</h4>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {message.recipe_data.ingredients?.length || 0} ingredients • 
-                  {message.recipe_data.instructions?.length || 0} steps
-                </p>
-                <Button 
-                  size="sm" 
-                  className="mt-2"
-                  onClick={() => addRecipeToCollection(message.recipe_data)}
-                >
-                  Add to Collection
-                </Button>
-              </div>
+              <RecipeCard 
+                recipe={message.recipe_data} 
+                showFullDetails={true} // Show full details for shared recipes
+                onAddToShoppingList={handleAddRecipeToCollection} // Allow adding to shopping list from here
+                onRecipeAdded={handleAddRecipeToCollection} // Allow adding to collection from here
+              />
               {message.content && (
-                <p className="text-sm">{message.content}</p>
+                <p className="text-sm mt-2">{message.content}</p>
               )}
             </div>
           ) : (
