@@ -31,7 +31,7 @@ interface CookbookManagerProps {
 }
 
 const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) => {
-  const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, syncGuestDataToUser } = useAppContext();
+  const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser } = useAppContext();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newCookbookName, setNewCookbookName] = useState('');
   const [newCookbookDescription, setNewCookbookDescription] = useState('');
