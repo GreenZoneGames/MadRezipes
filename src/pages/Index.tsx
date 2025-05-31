@@ -9,7 +9,8 @@ import ShoppingList from '@/components/ShoppingList';
 import ShoppingListPDF from '@/components/ShoppingListPDF';
 import MealExporter from '@/components/MealExporter';
 import CommunityFunctions from '@/components/CommunityFunctions';
-import ManualRecipeForm from '@/components/ManualRecipeForm'; // Import the new component
+import ManualRecipeForm from '@/components/ManualRecipeForm';
+import DirectMessageWindow from '@/components/DirectMessageWindow'; // Import DirectMessageWindow
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface CategorizedIngredients {
@@ -36,11 +37,18 @@ interface Recipe {
   cookbook_id?: string; // Changed to snake_case
 }
 
+interface OpenDmWindow {
+  id: string; // Unique ID for the window instance
+  recipientId: string;
+  recipientUsername: string;
+}
+
 const Index = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
   const [availableIngredients, setAvailableIngredients] = useState<string[]>([]);
   const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [openDmWindows, setOpenDmWindows] = useState<OpenDmWindow[]>([]); // State to manage multiple DM windows
 
   const handleRecipeAdded = (recipe: Recipe) => {
     setRecipes(prev => {
@@ -68,6 +76,20 @@ const Index = () => {
     setAvailableIngredients(ingredients);
   };
 
+  const handleOpenDm = (recipientId: string, recipientUsername: string) => {
+    // Check if a DM window for this recipient is already open
+    if (!openDmWindows.some(window => window.recipientId === recipientId)) {
+      setOpenDmWindows(prev => [
+        ...prev,
+        { id: `dm-${recipientId}-${Date.now()}`, recipientId, recipientUsername }
+      ]);
+    }
+  };
+
+  const handleCloseDm = (id: string) => {
+    setOpenDmWindows(prev => prev.filter(window => window.id !== id));
+  };
+
   return (
     <AppProvider>
       <AppLayout>
@@ -83,11 +105,11 @@ const Index = () => {
             </div>
 
             <Tabs defaultValue="planner" className="w-full">
-              <TabsList className="grid w-full grid-cols-4"> {/* Increased grid columns */}
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="planner">Meal Planner</TabsTrigger>
                 <TabsTrigger value="community">Community</TabsTrigger>
                 <TabsTrigger value="recipes">Recipes</TabsTrigger>
-                <TabsTrigger value="add-recipe">Add Recipe</TabsTrigger> {/* New Tab Trigger */}
+                <TabsTrigger value="add-recipe">Add Recipe</TabsTrigger>
               </TabsList>
               
               <TabsContent value="planner" className="space-y-6">
@@ -119,6 +141,7 @@ const Index = () => {
               
               <TabsContent value="community">
                 <CommunityFunctions />
+                <FriendsList onOpenDm={handleOpenDm} /> {/* Pass the DM handler */}
               </TabsContent>
               
               <TabsContent value="recipes">
@@ -134,7 +157,7 @@ const Index = () => {
                           key={recipe.id}
                           recipe={recipe}
                           onAddToShoppingList={() => { /* Placeholder for now */ }}
-                          onRecipeAdded={handleRecipeAdded} // Pass onRecipeAdded to RecipeCard
+                          onRecipeAdded={handleRecipeAdded}
                         />
                       ))}
                     </div>
@@ -146,7 +169,7 @@ const Index = () => {
                 )}
               </TabsContent>
 
-              <TabsContent value="add-recipe"> {/* New Tab Content */}
+              <TabsContent value="add-recipe">
                 <ManualRecipeForm onRecipeAdded={handleRecipeAdded} />
               </TabsContent>
             </Tabs>
@@ -154,6 +177,18 @@ const Index = () => {
         </div>
         <Toaster />
       </AppLayout>
+
+      {/* Render all open DM windows */}
+      {openDmWindows.map((dmWindow, index) => (
+        <DirectMessageWindow
+          key={dmWindow.id}
+          recipientId={dmWindow.recipientId}
+          recipientUsername={dmWindow.recipientUsername}
+          onClose={() => handleCloseDm(dmWindow.id)}
+          // Position multiple windows if needed, for now they'll stack
+          // style={{ right: `${4 + index * 20}px`, bottom: `${4 + index * 20}px` }}
+        />
+      ))}
     </AppProvider>
   );
 };

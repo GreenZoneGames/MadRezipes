@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Users, UserPlus, Share2, Trash2, Check, X } from 'lucide-react';
+import { Users, UserPlus, Share2, Trash2, Check, X, MessageSquare } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
@@ -13,9 +13,14 @@ interface Friend {
   friend_id: string; // The ID of the user who received the request
   email: string; // The email of the friend (the other user in the relationship)
   status: 'pending' | 'accepted';
+  username?: string; // Add username for display
 }
 
-const FriendsList: React.FC = () => {
+interface FriendsListProps {
+  onOpenDm: (recipientId: string, recipientUsername: string) => void;
+}
+
+const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
   const { user, friends, addFriend, removeFriend, acceptFriendRequest, rejectFriendRequest } = useAppContext();
   const [friendEmail, setFriendEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -214,14 +219,24 @@ const FriendsList: React.FC = () => {
                     Accepted
                   </Badge>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleRemoveFriend(friend.id, friend.email)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onOpenDm(friend.friend_id === user.id ? friend.user_id : friend.friend_id, friend.email)}
+                    className="text-blue-600 hover:text-blue-800 border-blue-300"
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveFriend(friend.id, friend.email)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
             ))
           )}
