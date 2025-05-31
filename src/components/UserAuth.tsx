@@ -57,10 +57,7 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange, onAuthSuccess }
       if (isLogin) {
         await signIn(email.trim(), password.trim());
         // AppContext's onAuthStateChange will handle fetching user data and updating state
-        toast({
-          title: `🍽️ Welcome back!`,
-          description: 'Successfully signed in to MadRezipes.'
-        });
+        // Toast moved to TopBar.tsx to ensure username is available
       } else { // isLogin is false, so it's signup
         await signUp(email.trim(), password.trim(), username.trim(), securityQuestion, securityAnswer.trim());
         

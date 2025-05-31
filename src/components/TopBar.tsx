@@ -16,11 +16,22 @@ const TopBar: React.FC = () => {
   const [showAuth, setShowAuth] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(!!user); // Track login state for animation
+  const [hasShownLoginToast, setHasShownLoginToast] = useState(false); // New state to track toast display
 
   useEffect(() => {
-    setIsLoggedIn(!!user);
-  }, [user]);
+    // Check if user just logged in (user is not null, and toast hasn't been shown yet)
+    if (user && !hasShownLoginToast) {
+      const displayName = user.username || user.email?.split('@')[0] || 'User';
+      toast({
+        title: `🍽️ Welcome back, ${displayName}!`,
+        description: 'Successfully signed in to MadRezipes.'
+      });
+      setHasShownLoginToast(true); // Mark toast as shown
+    } else if (!user && hasShownLoginToast) {
+      // If user logs out, reset the flag so toast can be shown again on next login
+      setHasShownLoginToast(false);
+    }
+  }, [user, hasShownLoginToast]); // Depend on user and hasShownLoginToast
 
   const displayName = user?.username || user?.email?.split('@')[0] || 'User';
 
@@ -46,7 +57,7 @@ const TopBar: React.FC = () => {
         onClick={handleMessageClick}
         className={cn(
           "text-white hover:text-white hover:bg-white/10 transition-all duration-500 ease-in-out",
-          isLoggedIn ? "opacity-100 translate-x-0" : "opacity-100 translate-x-0" // Always visible, no animation for this one
+          // No animation for this one, it's always visible
         )}
       >
         <MessageCircle className="h-4 w-4" />
@@ -57,7 +68,7 @@ const TopBar: React.FC = () => {
       {user ? (
         <div className={cn(
           "flex items-center gap-2 transition-all duration-500 ease-in-out",
-          isLoggedIn ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"
+          "opacity-100 translate-x-0" // Always visible when logged in
         )}>
           <Button 
             variant="ghost" 
@@ -76,7 +87,7 @@ const TopBar: React.FC = () => {
           onClick={() => setShowAuth(true)}
           className={cn(
             "text-white hover:text-white hover:bg-white/10 border border-white/20 transition-all duration-500 ease-in-out",
-            isLoggedIn ? "opacity-0 translate-x-full" : "opacity-100 translate-x-0"
+            "opacity-100 translate-x-0" // Always visible when logged out
           )}
         >
           <LogIn className="h-4 w-4" />
