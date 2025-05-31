@@ -47,8 +47,8 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .eq('recipient_id', user.id)
-        .is('parent_message_id', null)
+        .or(`recipient_id.eq.${user.id},sender_id.eq.${user.id}`) // Fetch messages where user is sender or recipient
+        .is('parent_message_id', null) // Only fetch top-level messages
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -58,7 +58,8 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
           const { data: replies } = await supabase
             .from('messages')
             .select('*')
-            .eq('parent_message_id', msg.id)
+            .eq('thread_id', msg.thread_id || msg.id) // Fetch replies belonging to the same thread
+            .not('id', 'eq', msg.id) // Exclude the parent message itself
             .order('created_at', { ascending: true });
           
           return { ...msg, replies: replies || [] };
@@ -82,7 +83,8 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
       await supabase
         .from('messages')
         .update({ read: true })
-        .eq('id', messageId);
+        .eq('id', messageId)
+        .eq('recipient_id', user?.id); // Ensure only recipient can mark as read
       
       setMessages(prev => 
         prev.map(msg => 
@@ -118,6 +120,7 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
         title: 'Message sent!',
         description: 'Your message has been sent successfully.'
       });
+      fetchMessages(); // Re-fetch messages to show the new one
     } catch (error: any) {
       toast({
         title: 'Error sending message',
@@ -135,21 +138,24 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
     const parentMessage = messages.find(m => m.id === parentId);
     if (!parentMessage) return;
     
+    // Determine the actual recipient of the reply (the original sender of the parent message)
+    const replyRecipientId = parentMessage.sender_id;
+
     const { error } = await supabase
       .from('messages')
       .insert({
         sender_id: user.id,
         sender_username: user.username || user.email?.split('@')[0] || 'User',
-        recipient_id: parentMessage.sender_id,
+        recipient_id: replyRecipientId,
         parent_message_id: parentId,
-        thread_id: parentMessage.thread_id || parentId,
+        thread_id: parentMessage.thread_id || parentId, // Use existing thread_id or parentId if new thread
         content,
         message_type: 'text'
       });
     
     if (error) throw error;
     
-    fetchMessages();
+    fetchMessages(); // Re-fetch messages to update the thread
   };
 
   useEffect(() => {
@@ -158,7 +164,7 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
     }
   }, [open, user]);
 
-  const unreadCount = messages.filter(msg => !msg.read).length;
+  const unreadCount = messages.filter(msg => !msg.read && msg.recipient_id === user?.id).length;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -191,7 +197,7 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
               >
                 <option value="">Select a friend...</option>
                 {friends.filter(f => f.status === 'accepted').map(friend => (
-                  <option key={friend.id} value={friend.id}>
+                  <option key={friend.id} value={friend.friend_id === user?.id ? friend.user_id : friend.friend_id}>
                     {friend.email}
                   </option>
                 ))}
@@ -224,20 +230,20 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
           </div>
         )}
         
-        <div className="space-y-3">
+        <div className="space-y-3 min-h-[200px]"> {/* Added min-h to prevent resizing */}
           {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-4 text-muted-foreground"> {/* Adjusted padding */}
               Loading messages...
             </div>
           ) : messages.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
+            <div className="text-center py-4 text-muted-foreground"> {/* Adjusted padding */}
               <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>No messages yet</p>
               <p className="text-xs">Start a conversation with your friends!</p>
             </div>
           ) : (
             messages.map((message) => (
-              <div key={message.id} onClick={() => !message.read && markAsRead(message.id)}>
+              <div key={message.id} onClick={() => !message.read && message.recipient_id === user?.id && markAsRead(message.id)}>
                 <ThreadedMessage
                   message={message}
                   onReply={handleReply}
