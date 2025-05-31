@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'; // Added import for Dialog components
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -302,7 +302,7 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
             </div>
           ) : (
             messages.map((message) => (
-              <div key={message.id} onClick={()={() => !message.read && message.recipient_id === user?.id && markAsRead(message.id)}}>
+              <div key={message.id} onClick={() => !message.read && message.recipient_id === user?.id && markAsRead(message.id)}>
                 <ThreadedMessage
                   message={message}
                   onReply={handleReply}
