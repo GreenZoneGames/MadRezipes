@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 interface UserAuthProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAuthSuccess?: () => void; // New prop
 }
 
 const securityQuestions = [
@@ -21,7 +22,7 @@ const securityQuestions = [
   "What was your favorite food as a child?"
 ];
 
-const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
+const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange, onAuthSuccess }) => {
   const { signIn, signUp, sendPasswordResetEmail } = useAppContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,18 +55,17 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
     setLoading(true);
     try {
       if (isLogin) {
-        const { data: authData, error } = await supabase.auth.signInWithPassword({ // Renamed data to authData
+        const { data: authData, error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
           password: password.trim()
         });
         
         if (error) throw error;
         
-        // After successful sign-in, fetch the user data to get the username
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('username, email')
-          .eq('id', authData.user?.id) // Used authData.user?.id
+          .eq('id', authData.user?.id)
           .single();
 
         if (userError) {
@@ -98,9 +98,6 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
         if (error) throw error;
         
         if (data.user) {
-          // Note: Supabase automatically handles profile creation if you set up the trigger.
-          // The 'users' table insertion here might be redundant if a trigger is used.
-          // Keeping it for now as per existing code, but be aware of potential duplicates.
           const { error: insertError } = await supabase
             .from('users')
             .insert({
@@ -123,6 +120,7 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
       }
       resetForm();
       onOpenChange(false);
+      onAuthSuccess?.(); // Call the success callback
     } catch (error: any) {
       console.error('Auth error:', error);
       toast({

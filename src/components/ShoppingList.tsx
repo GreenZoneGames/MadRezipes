@@ -18,13 +18,13 @@ interface Recipe {
   id: string;
   title: string;
   ingredients: string[];
-  categorizedIngredients?: CategorizedIngredients;
+  categorized_ingredients?: CategorizedIngredients; // Changed to snake_case
   instructions: string[];
   url: string;
   image?: string;
-  cookTime?: string;
+  cook_time?: string; // Changed to snake_case
   servings?: number;
-  mealType?: string;
+  meal_type?: string; // Changed to snake_case
 }
 
 interface MealPlan {
@@ -42,7 +42,7 @@ interface ShoppingListProps {
 }
 
 const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChange, mealPlan = [] }) => {
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [checkedItems, setCheckedItems] = new Set<string>();
   const [showByCategory, setShowByCategory] = useState(true);
 
   const calculateIngredientsWithServings = () => {
@@ -62,8 +62,8 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
             const currentAmount = ingredientMap.get(key) || 0;
             ingredientMap.set(key, currentAmount + servingMultiplier);
             
-            if (recipe.categorizedIngredients) {
-              for (const [category, items] of Object.entries(recipe.categorizedIngredients)) {
+            if (recipe.categorized_ingredients) { // Changed to snake_case
+              for (const [category, items] of Object.entries(recipe.categorized_ingredients)) { // Changed to snake_case
                 if (items.some(item => item.toLowerCase().trim() === key)) {
                   categoryMap.set(key, category);
                   break;
@@ -80,8 +80,8 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
           const currentAmount = ingredientMap.get(key) || 0;
           ingredientMap.set(key, currentAmount + 1);
           
-          if (recipe.categorizedIngredients) {
-            for (const [category, items] of Object.entries(recipe.categorizedIngredients)) {
+          if (recipe.categorized_ingredients) { // Changed to snake_case
+            for (const [category, items] of Object.entries(recipe.categorized_ingredients)) { // Changed to snake_case
               if (items.some(item => item.toLowerCase().trim() === key)) {
                 categoryMap.set(key, category);
                 break;

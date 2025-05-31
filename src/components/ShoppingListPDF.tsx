@@ -11,9 +11,9 @@ interface Recipe {
   instructions: string[];
   url: string;
   image?: string;
-  cookTime?: string;
+  cook_time?: string; // Changed to snake_case
   servings?: number;
-  mealType?: string;
+  meal_type?: string; // Changed to snake_case
 }
 
 interface MealPlan {

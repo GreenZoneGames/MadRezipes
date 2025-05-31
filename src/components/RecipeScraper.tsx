@@ -6,7 +6,7 @@ import { Loader2, ChefHat, Plus, Utensils, CheckCircle, BookOpen } from 'lucide-
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { supabase } from '@/lib/supabase'; // Import supabase client
+import { supabase } from '@/lib/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '@/contexts/AppContext';
@@ -25,14 +25,14 @@ interface Recipe {
   id: string;
   title: string;
   ingredients: string[];
-  categorizedIngredients?: CategorizedIngredients;
+  categorized_ingredients?: CategorizedIngredients; // Changed to snake_case
   instructions: string[];
   url: string;
   image?: string;
-  cookTime?: string;
+  cook_time?: string; // Changed to snake_case
   servings?: number;
-  mealType?: string;
-  cookbookId?: string; // Added cookbookId
+  meal_type?: string; // Changed to snake_case
+  cookbook_id?: string; // Changed to snake_case
 }
 
 interface RecipeScraperProps {
@@ -40,15 +40,17 @@ interface RecipeScraperProps {
 }
 
 const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
-  const { user, cookbooks, createCookbook, addRecipeToCookbook } = useAppContext();
+  const { user, cookbooks, guestCookbooks, createCookbook, addRecipeToCookbook } = useAppContext();
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [scrapedRecipes, setScrapedRecipes] = useState<Recipe[]>([]);
-  const [selectedRecipes, setSelectedRecipes] = useState(new Set<string>()); // Fixed this line
+  const [selectedRecipes, setSelectedRecipes] = useState(new Set<string>());
   const [showCookbookDialog, setShowCookbookDialog] = useState(false);
   const [selectedCookbookId, setSelectedCookbookId] = useState('');
   const [newCookbookName, setNewCookbookName] = useState('');
   const [creatingCookbook, setCreatingCookbook] = useState(false);
+
+  const currentCookbooks = user ? cookbooks : guestCookbooks;
 
   const handleScrape = async () => {
     if (!url.trim()) {
@@ -82,7 +84,10 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
         const recipesWithIds = data.recipes.map((recipe: any) => ({
           ...recipe,
           id: recipe.id || `recipe-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          categorizedIngredients: recipe.categorizedIngredients || {}, // Ensure it's an object
+          categorized_ingredients: recipe.categorizedIngredients || {}, // Map to snake_case
+          cook_time: recipe.cookTime, // Map to snake_case
+          meal_type: recipe.mealType, // Map to snake_case
+          cookbook_id: recipe.cookbookId, // Map to snake_case
         }));
         setScrapedRecipes(recipesWithIds);
         toast({ 
@@ -120,8 +125,8 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
   };
 
   const handleAddSelectedToCookbook = async () => {
-    if (!user) {
-      toast({ title: 'Authentication Required', description: 'Please sign in to add recipes to a cookbook.', variant: 'destructive' });
+    if (currentCookbooks.length === 0) {
+      toast({ title: 'No Cookbooks', description: 'Please create a cookbook first.', variant: 'destructive' });
       return;
     }
     if (!selectedCookbookId) {
@@ -134,7 +139,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
       const recipesToAdd = scrapedRecipes.filter(recipe => selectedRecipes.has(recipe.id));
       for (const recipe of recipesToAdd) {
         await addRecipeToCookbook(recipe, selectedCookbookId);
-        onRecipeAdded({ ...recipe, cookbookId: selectedCookbookId }); // Update local state with cookbookId
+        onRecipeAdded({ ...recipe, cookbook_id: selectedCookbookId }); // Update local state with cookbook_id
       }
       
       toast({
@@ -257,7 +262,6 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                     <DialogTrigger asChild>
                       <Button
                         className="bg-gradient-to-r from-green-500 to-emerald-500"
-                        disabled={!user}
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add {selectedRecipes.size} Recipe{selectedRecipes.size > 1 ? 's' : ''}
@@ -271,14 +275,14 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                         </DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
-                        {cookbooks.length > 0 ? (
+                        {currentCookbooks.length > 0 ? (
                           <Select value={selectedCookbookId} onValueChange={setSelectedCookbookId}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select an existing cookbook" />
                             </SelectTrigger>
                             <SelectContent>
-                              {cookbooks.map(cb => (
-                                <SelectItem key={cb.id} value={cb.id}>{cb.name}</SelectItem>
+                              {currentCookbooks.map(cb => (
+                                <SelectItem key={cb.id} value={cb.id}>{cb.name} {cb.user_id === 'guest' && '(Unsaved)'}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -360,11 +364,11 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                         </Badge>
                       </div>
                       
-                      {recipe.categorizedIngredients && (
+                      {recipe.categorized_ingredients && (
                         <div className="text-xs mb-2">
                           <div className="font-medium mb-1">📦 Categorized Ingredients:</div>
                           <div className="flex flex-wrap gap-1">
-                            {Object.entries(recipe.categorizedIngredients).map(([category, items]) => {
+                            {Object.entries(recipe.categorized_ingredients).map(([category, items]) => {
                               if (items.length === 0) return null;
                               return (
                                 <span 

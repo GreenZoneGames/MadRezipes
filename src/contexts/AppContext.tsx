@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { useQueryClient } from '@tanstack/react-query';
+import { v4 as uuidv4 } from 'uuid';
 
 interface User {
   id: string;
@@ -34,14 +36,14 @@ interface Recipe {
   id: string;
   title: string;
   ingredients: string[];
-  categorizedIngredients?: CategorizedIngredients;
+  categorized_ingredients?: CategorizedIngredients; // Changed to snake_case
   instructions: string[];
   url: string;
   image?: string;
-  cookTime?: string;
+  cook_time?: string; // Changed to snake_case
   servings?: number;
-  mealType?: string;
-  cookbookId?: string; // Added cookbookId
+  meal_type?: string; // Changed to snake_case
+  cookbook_id?: string; // Changed to snake_case
 }
 
 interface AppContextType {
@@ -51,16 +53,19 @@ interface AppContextType {
   cookbooks: Cookbook[];
   selectedCookbook: Cookbook | null;
   friends: Friend[];
+  guestCookbooks: Cookbook[]; // New state for guest cookbooks
+  guestRecipes: Recipe[]; // New state for guest recipes
   setSelectedCookbook: (cookbook: Cookbook | null) => void;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, username?: string, securityQuestion?: string, securityAnswer?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  createCookbook: (name: string, description?: string) => Promise<Cookbook | null>; // Updated return type
+  createCookbook: (name: string, description?: string) => Promise<Cookbook | null>;
   addFriend: (email: string) => Promise<void>;
   removeFriend: (friendId: string) => Promise<void>;
   shareRecipe: (recipeId: string, friendId: string) => Promise<void>;
   addRecipeToCookbook: (recipe: Recipe, cookbookId: string) => Promise<void>;
-  sendPasswordResetEmail: (email: string) => Promise<void>; // New function
+  sendPasswordResetEmail: (email: string) => Promise<void>;
+  syncGuestDataToUser: () => Promise<void>; // New function to sync guest data
 }
 
 const defaultAppContext: AppContextType = {
@@ -70,16 +75,19 @@ const defaultAppContext: AppContextType = {
   cookbooks: [],
   selectedCookbook: null,
   friends: [],
+  guestCookbooks: [],
+  guestRecipes: [],
   setSelectedCookbook: () => {},
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
-  createCookbook: async () => null, // Updated default return
+  createCookbook: async () => null,
   addFriend: async () => {},
   removeFriend: async () => {},
   shareRecipe: async () => {},
   addRecipeToCookbook: async () => {},
-  sendPasswordResetEmail: async () => {}, // Default for new function
+  sendPasswordResetEmail: async () => {},
+  syncGuestDataToUser: async () => {},
 };
 
 const AppContext = createContext<AppContextType>(defaultAppContext);
@@ -87,104 +95,38 @@ const AppContext = createContext<AppContextType>(defaultAppContext);
 export const useAppContext = () => useContext(AppContext);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const queryClient = useQueryClient();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [cookbooks, setCookbooks] = useState<Cookbook[]>([]);
   const [selectedCookbook, setSelectedCookbook] = useState<Cookbook | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
+  const [guestCookbooks, setGuestCookbooks] = useState<Cookbook[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('guestCookbooks');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+  const [guestRecipes, setGuestRecipes] = useState<Recipe[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('guestRecipes');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
 
   useEffect(() => {
-    checkUser();
-  }, []);
-
-  const checkUser = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: userData } = await supabase
-          .from('users')
-          .select('*')
-          .eq('email', session.user.email)
-          .single();
-        
-        if (userData) {
-          setUser(userData);
-          loadCookbooks(userData.id);
-          loadFriends(userData.id);
-        }
-      }
-    } catch (error) {
-      console.error('Check user error:', error);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('guestCookbooks', JSON.stringify(guestCookbooks));
     }
-  };
+  }, [guestCookbooks]);
 
-  const toggleSidebar = () => {
-    setSidebarOpen(prev => !prev);
-  };
-
-  const signIn = async (email: string, password: string) => {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) throw error;
-      
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .single();
-      
-      if (userError) {
-        // Create user record if it doesn't exist
-        const { data: newUser, error: createError } = await supabase
-          .from('users')
-          .insert({ email })
-          .select()
-          .single();
-        if (createError) throw createError;
-        setUser(newUser);
-        loadCookbooks(newUser.id);
-      } else {
-        setUser(userData);
-        loadCookbooks(userData.id);
-        loadFriends(userData.id);
-      }
-    } catch (error) {
-      console.error('Sign in error:', error);
-      throw error;
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('guestRecipes', JSON.stringify(guestRecipes));
     }
-  };
-
-  const signUp = async (email: string, password: string, username?: string, securityQuestion?: string, securityAnswer?: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) throw error;
-      
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .insert({ 
-          email, 
-          username,
-          security_question: securityQuestion,
-          security_answer: securityAnswer
-        })
-        .select()
-        .single();
-      
-      if (userError) throw userError;
-      setUser(userData);
-    } catch (error) {
-      console.error('Sign up error:', error);
-      throw error;
-    }
-  };
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setCookbooks([]);
-    setSelectedCookbook(null);
-    setFriends([]);
-  };
+  }, [guestRecipes]);
 
   const loadCookbooks = async (userId: string) => {
     try {
@@ -214,8 +156,186 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const syncGuestDataToUser = useCallback(async () => {
+    if (!user || (guestCookbooks.length === 0 && guestRecipes.length === 0)) {
+      return;
+    }
+
+    console.log('Syncing guest data to user account...');
+    const cookbookIdMap: { [guestId: string]: string } = {};
+    const newCookbooks: Cookbook[] = [];
+    const newRecipes: Recipe[] = [];
+
+    try {
+      // 1. Insert guest cookbooks
+      for (const guestCb of guestCookbooks) {
+        const { data: newCb, error: cbError } = await supabase
+          .from('cookbooks')
+          .insert({ name: guestCb.name, description: guestCb.description, user_id: user.id })
+          .select()
+          .single();
+        
+        if (cbError) {
+          console.error('Error inserting guest cookbook:', cbError);
+          continue;
+        }
+        cookbookIdMap[guestCb.id] = newCb.id;
+        newCookbooks.push(newCb);
+      }
+
+      // 2. Insert guest recipes
+      for (const guestRecipe of guestRecipes) {
+        const newCookbookId = guestRecipe.cookbook_id ? cookbookIdMap[guestRecipe.cookbook_id] : null;
+        
+        const { error: recipeError } = await supabase
+          .from('recipes')
+          .insert({
+            user_id: user.id,
+            cookbook_id: newCookbookId,
+            title: guestRecipe.title,
+            ingredients: guestRecipe.ingredients,
+            instructions: guestRecipe.instructions,
+            url: guestRecipe.url,
+            image: guestRecipe.image,
+            cook_time: guestRecipe.cook_time,
+            servings: guestRecipe.servings,
+            meal_type: guestRecipe.meal_type,
+            categorized_ingredients: guestRecipe.categorized_ingredients,
+          });
+        
+        if (recipeError) {
+          console.error('Error inserting guest recipe:', recipeError);
+          continue;
+        }
+        newRecipes.push(guestRecipe); // Just for logging/confirmation, actual data comes from DB reload
+      }
+
+      console.log(`Synced ${newCookbooks.length} cookbooks and ${newRecipes.length} recipes.`);
+      
+      // Clear guest data after successful sync
+      setGuestCookbooks([]);
+      setGuestRecipes([]);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('guestCookbooks');
+        localStorage.removeItem('guestRecipes');
+      }
+
+      // Invalidate queries to refetch user's actual data from Supabase
+      queryClient.invalidateQueries({ queryKey: ['cookbooks', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['recipes', user.id] });
+
+    } catch (error) {
+      console.error('Error syncing guest data:', error);
+    }
+  }, [user, guestCookbooks, guestRecipes, queryClient]);
+
+  const checkUser = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: userData } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', session.user.email)
+          .single();
+        
+        if (userData) {
+          setUser(userData);
+          loadCookbooks(userData.id);
+          loadFriends(userData.id);
+          // Sync guest data after user is set and their data is loaded
+          if (guestCookbooks.length > 0 || guestRecipes.length > 0) {
+            syncGuestDataToUser();
+          }
+        }
+      } else {
+        setUser(null);
+        setCookbooks([]); // Clear Supabase cookbooks if logged out
+        setFriends([]); // Clear Supabase friends if logged out
+      }
+    } catch (error) {
+      console.error('Check user error:', error);
+    }
+  }, [guestCookbooks, guestRecipes, syncGuestDataToUser]);
+
+  useEffect(() => {
+    checkUser();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, _session) => {
+      checkUser(); // Re-check user on auth state change
+    });
+
+    return () => subscription.unsubscribe();
+  }, [checkUser]);
+
+  const toggleSidebar = () => {
+    setSidebarOpen(prev => !prev);
+  };
+
+  const signIn = async (email: string, password: string) => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      // checkUser will handle setting user and syncing data
+    } catch (error) {
+      console.error('Sign in error:', error);
+      throw error;
+    }
+  };
+
+  const signUp = async (email: string, password: string, username?: string, securityQuestion?: string, securityAnswer?: string) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      
+      if (data.user) {
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: data.user.id,
+            email: email.trim(),
+            username: username?.trim(),
+            security_question: securityQuestion,
+            security_answer: securityAnswer?.trim()
+          });
+        
+        if (insertError) {
+          console.error('Error inserting user data:', insertError);
+          // Even if insert fails, user is created in auth.users, so proceed
+        }
+      }
+      // checkUser will handle setting user and syncing data
+    } catch (error) {
+      console.error('Sign up error:', error);
+      throw error;
+    }
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setCookbooks([]);
+    setSelectedCookbook(null);
+    setFriends([]);
+    setGuestCookbooks([]); // Clear guest data on explicit sign out
+    setGuestRecipes([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('guestCookbooks');
+      localStorage.removeItem('guestRecipes');
+    }
+  };
+
   const createCookbook = async (name: string, description?: string): Promise<Cookbook | null> => {
-    if (!user) return null;
+    if (!user) {
+      // Guest mode: create in local storage
+      const newGuestCookbook: Cookbook = {
+        id: uuidv4(),
+        name,
+        description,
+        user_id: 'guest', // Placeholder for guest user
+      };
+      setGuestCookbooks(prev => [...prev, newGuestCookbook]);
+      return newGuestCookbook;
+    }
     
     try {
       const { data, error } = await supabase
@@ -226,15 +346,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       if (error) throw error;
       setCookbooks(prev => [...prev, data]);
-      return data; // Return the newly created cookbook
+      return data;
     } catch (error) {
       console.error('Create cookbook error:', error);
-      throw error; // Re-throw to be caught by calling component
+      throw error;
     }
   };
 
   const addFriend = async (email: string) => {
-    if (!user) return;
+    if (!user) return; // Friends always require a user
     
     try {
       const { data, error } = await supabase
@@ -252,11 +372,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const removeFriend = async (friendId: string) => {
+    if (!user) return; // Friends always require a user
     try {
       const { error } = await supabase
         .from('friends')
         .delete()
-        .eq('id', friendId);
+        .eq('id', friendId)
+        .eq('user_id', user.id); // Ensure user owns the friend relationship
       
       if (error) throw error;
       setFriends(prev => prev.filter(f => f.id !== friendId));
@@ -267,7 +389,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const shareRecipe = async (recipeId: string, friendId: string) => {
-    if (!user) return;
+    if (!user) return; // Sharing always requires a user
     
     try {
       const { error } = await supabase
@@ -282,7 +404,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addRecipeToCookbook = async (recipe: Recipe, cookbookId: string) => {
-    if (!user) throw new Error('User not authenticated.');
+    if (!user) {
+      // Guest mode: add to local storage
+      const newGuestRecipe: Recipe = {
+        ...recipe,
+        id: recipe.id || uuidv4(), // Ensure recipe has an ID
+        cookbook_id: cookbookId,
+      };
+      setGuestRecipes(prev => [...prev, newGuestRecipe]);
+      return;
+    }
     
     try {
       const { data, error } = await supabase
@@ -295,10 +426,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           instructions: recipe.instructions,
           url: recipe.url,
           image: recipe.image,
-          cook_time: recipe.cookTime,
+          cook_time: recipe.cook_time,
           servings: recipe.servings,
-          meal_type: recipe.mealType,
-          categorized_ingredients: recipe.categorizedIngredients,
+          meal_type: recipe.meal_type,
+          categorized_ingredients: recipe.categorized_ingredients,
         })
         .select()
         .single();
@@ -330,6 +461,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         cookbooks,
         selectedCookbook,
         friends,
+        guestCookbooks,
+        guestRecipes,
         setSelectedCookbook,
         signIn,
         signUp,
@@ -340,6 +473,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         shareRecipe,
         addRecipeToCookbook,
         sendPasswordResetEmail,
+        syncGuestDataToUser,
       }}
     >
       {children}

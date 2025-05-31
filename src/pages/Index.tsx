@@ -25,14 +25,14 @@ interface Recipe {
   id: string;
   title: string;
   ingredients: string[];
-  categorizedIngredients?: CategorizedIngredients;
+  categorized_ingredients?: CategorizedIngredients; // Changed to snake_case
   instructions: string[];
   url: string;
   image?: string;
-  cookTime?: string;
+  cook_time?: string; // Changed to snake_case
   servings?: number;
-  mealType?: string;
-  cookbookId?: string; // Added cookbookId
+  meal_type?: string; // Changed to snake_case
+  cookbook_id?: string; // Changed to snake_case
 }
 
 const Index = () => {

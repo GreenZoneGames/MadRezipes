@@ -23,14 +23,14 @@ interface Recipe {
   id: string;
   title: string;
   ingredients: string[];
-  categorizedIngredients?: CategorizedIngredients;
+  categorized_ingredients?: CategorizedIngredients; // Changed to snake_case
   instructions: string[];
   url: string;
   image?: string;
-  cookTime?: string;
+  cook_time?: string; // Changed to snake_case
   servings?: number;
-  mealType?: string;
-  cookbookId?: string; // Added cookbookId
+  meal_type?: string; // Changed to snake_case
+  cookbook_id?: string; // Changed to snake_case
 }
 
 interface RecipeCardProps {
@@ -40,12 +40,14 @@ interface RecipeCardProps {
 }
 
 const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, onRecipeAdded }) => {
-  const { user, cookbooks, createCookbook, addRecipeToCookbook } = useAppContext();
+  const { user, cookbooks, guestCookbooks, createCookbook, addRecipeToCookbook } = useAppContext();
   const [showCookbookDialog, setShowCookbookDialog] = useState(false);
   const [selectedCookbookId, setSelectedCookbookId] = useState('');
   const [newCookbookName, setNewCookbookName] = useState('');
   const [creatingCookbook, setCreatingCookbook] = useState(false);
   const [addingRecipe, setAddingRecipe] = useState(false);
+
+  const currentCookbooks = user ? cookbooks : guestCookbooks;
 
   const categoryColors = {
     proteins: 'bg-red-100 text-red-800',
@@ -68,8 +70,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
   };
 
   const handleAddRecipeToCookbook = async () => {
-    if (!user) {
-      toast({ title: 'Authentication Required', description: 'Please sign in to add recipes to a cookbook.', variant: 'destructive' });
+    if (currentCookbooks.length === 0) {
+      toast({ title: 'No Cookbooks', description: 'Please create a cookbook first.', variant: 'destructive' });
       return;
     }
     if (!selectedCookbookId) {
@@ -85,7 +87,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
         description: `${recipe.title} has been added to your cookbook.`
       });
       if (onRecipeAdded) {
-        onRecipeAdded({ ...recipe, cookbookId: selectedCookbookId });
+        onRecipeAdded({ ...recipe, cookbook_id: selectedCookbookId }); // Update local state with cookbook_id
       }
       setShowCookbookDialog(false);
       setSelectedCookbookId('');
@@ -140,10 +142,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
               {recipe.title}
             </CardTitle>
             <div className="flex flex-wrap gap-2">
-              {recipe.cookTime && (
+              {recipe.cook_time && (
                 <Badge variant="secondary" className="text-xs">
                   <Clock className="h-3 w-3 mr-1" />
-                  {recipe.cookTime}
+                  {recipe.cook_time}
                 </Badge>
               )}
               {recipe.servings && (
@@ -160,11 +162,11 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
         </div>
       </CardHeader>
       <CardContent>
-        {recipe.categorizedIngredients && Object.keys(recipe.categorizedIngredients).length > 0 && (
+        {recipe.categorized_ingredients && Object.keys(recipe.categorized_ingredients).length > 0 && (
           <div className="mb-4">
             <h4 className="font-semibold mb-2 text-sm">📋 Ingredients by Category:</h4>
             <div className="space-y-2">
-              {Object.entries(recipe.categorizedIngredients || {}).map(([category, items]) => {
+              {Object.entries(recipe.categorized_ingredients || {}).map(([category, items]) => {
                 if (items.length === 0) return null;
                 return (
                   <div key={category} className="text-xs">
@@ -203,64 +205,62 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
               🛒 Add to List
             </Button>
           )}
-          {user && (
-            <Dialog open={showCookbookDialog} onOpenChange={setShowCookbookDialog}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  <BookOpen className="h-4 w-4 mr-1" />
-                  Add to Cookbook
-                </Button>
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <BookOpen className="h-5 w-5" />
-                    Add "{recipe.title}" to Cookbook
-                  </DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  {cookbooks.length > 0 ? (
-                    <Select value={selectedCookbookId} onValueChange={setSelectedCookbookId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an existing cookbook" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {cookbooks.map(cb => (
-                          <SelectItem key={cb.id} value={cb.id}>{cb.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No cookbooks found. Create one below!</p>
-                  )}
-                  
-                  <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="Or create new cookbook"
-                      value={newCookbookName}
-                      onChange={(e) => setNewCookbookName(e.target.value)}
-                      disabled={creatingCookbook}
-                    />
-                    <Button onClick={handleCreateNewCookbook} disabled={creatingCookbook}>
-                      {creatingCookbook ? 'Creating...' : 'Create'}
-                    </Button>
-                  </div>
-
-                  <Button 
-                    onClick={handleAddRecipeToCookbook} 
-                    disabled={addingRecipe || !selectedCookbookId} 
-                    className="w-full"
-                  >
-                    {addingRecipe ? 'Adding...' : 'Add Recipe to Cookbook'}
+          <Dialog open={showCookbookDialog} onOpenChange={setShowCookbookDialog}>
+            <DialogTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                <BookOpen className="h-4 w-4 mr-1" />
+                Add to Cookbook
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5" />
+                  Add "{recipe.title}" to Cookbook
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                {currentCookbooks.length > 0 ? (
+                  <Select value={selectedCookbookId} onValueChange={setSelectedCookbookId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select an existing cookbook" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currentCookbooks.map(cb => (
+                        <SelectItem key={cb.id} value={cb.id}>{cb.name} {cb.user_id === 'guest' && '(Unsaved)'}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No cookbooks found. Create one below!</p>
+                )}
+                
+                <div className="flex items-center gap-2">
+                  <Input
+                    placeholder="Or create new cookbook"
+                    value={newCookbookName}
+                    onChange={(e) => setNewCookbookName(e.target.value)}
+                    disabled={creatingCookbook}
+                  />
+                  <Button onClick={handleCreateNewCookbook} disabled={creatingCookbook}>
+                    {creatingCookbook ? 'Creating...' : 'Create'}
                   </Button>
                 </div>
-              </DialogContent>
-            </Dialog>
-          )}
+
+                <Button 
+                  onClick={handleAddRecipeToCookbook} 
+                  disabled={addingRecipe || !selectedCookbookId} 
+                  className="w-full"
+                >
+                  {addingRecipe ? 'Adding...' : 'Add Recipe to Cookbook'}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </CardContent>
     </Card>

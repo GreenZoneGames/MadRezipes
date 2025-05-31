@@ -20,10 +20,10 @@ interface Recipe {
   instructions: string[];
   url: string;
   image?: string;
-  cookTime?: string;
+  cook_time?: string; // Changed to snake_case
   servings?: number;
-  mealType?: string;
-  cookbookId?: string;
+  meal_type?: string; // Changed to snake_case
+  cookbook_id?: string; // Changed to snake_case
 }
 
 const AppLayout: React.FC = () => {

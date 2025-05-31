@@ -13,9 +13,9 @@ interface Recipe {
   instructions: string[];
   url: string;
   image?: string;
-  cookTime?: string;
+  cook_time?: string; // Changed to snake_case
   servings?: number;
-  mealType?: string;
+  meal_type?: string; // Changed to snake_case
 }
 
 export interface MealPlan {
@@ -105,8 +105,8 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
             `⏰ Cook for 15-20 minutes until tender`,
             `🧂 Season to taste and serve hot`
           ],
-          mealType: 'Dinner',
-          cookTime: '25 min',
+          meal_type: 'Dinner', // Changed to snake_case
+          cook_time: '25 min', // Changed to snake_case
           servings: 4,
           image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&h=200&fit=crop'
         }
@@ -120,9 +120,9 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
         instructions: randomTemplate.instructions,
         url: 'generated',
         image: randomTemplate.image,
-        cookTime: randomTemplate.cookTime,
+        cook_time: randomTemplate.cook_time, // Changed to snake_case
         servings: randomTemplate.servings,
-        mealType: randomTemplate.mealType
+        meal_type: randomTemplate.meal_type // Changed to snake_case
       };
       
       onRecipeGenerated(generatedRecipe);
