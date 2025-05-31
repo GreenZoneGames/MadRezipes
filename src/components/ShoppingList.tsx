@@ -42,7 +42,7 @@ interface ShoppingListProps {
 }
 
 const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChange, mealPlan = [] }) => {
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set()); // Corrected initialization
+  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
   const [showByCategory, setShowByCategory] = useState(true);
 
   const calculateIngredientsWithServings = () => {
@@ -85,11 +85,10 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
               if (items.some(item => item.toLowerCase().trim() === key)) {
                 categoryMap.set(key, category);
                 break;
-                }
               }
             }
-          });
-        }
+          }
+        });
       });
     }
     
