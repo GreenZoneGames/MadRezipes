@@ -157,11 +157,11 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
         </div>
       </CardHeader>
       <CardContent>
-        {recipe.categorizedIngredients && (
+        {recipe.categorizedIngredients && Object.keys(recipe.categorizedIngredients).length > 0 && (
           <div className="mb-4">
             <h4 className="font-semibold mb-2 text-sm">📋 Ingredients by Category:</h4>
             <div className="space-y-2">
-              {Object.entries(recipe.categorizedIngredients).map(([category, items]) => {
+              {Object.entries(recipe.categorizedIngredients || {}).map(([category, items]) => {
                 if (items.length === 0) return null;
                 return (
                   <div key={category} className="text-xs">

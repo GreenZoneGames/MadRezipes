@@ -44,7 +44,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [scrapedRecipes, setScrapedRecipes] = useState<Recipe[]>([]);
-  const [selectedRecipes, setSelectedRecipes] = useState<Set<string>>(new Set());
+  const [selectedRecipes, setSelectedRecipes] = new Set());
   const [showCookbookDialog, setShowCookbookDialog] = useState(false);
   const [selectedCookbookId, setSelectedCookbookId] = useState('');
   const [newCookbookName, setNewCookbookName] = useState('');
@@ -81,7 +81,8 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
       if (data.recipes && data.recipes.length > 0) {
         const recipesWithIds = data.recipes.map((recipe: any) => ({
           ...recipe,
-          id: recipe.id || `recipe-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+          id: recipe.id || `recipe-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          categorizedIngredients: recipe.categorizedIngredients || {}, // Ensure it's an object
         }));
         setScrapedRecipes(recipesWithIds);
         toast({ 
@@ -91,7 +92,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
       } else {
         toast({ 
           title: '🔍 No Recipes Found', 
-          description: 'Could not find recipe data on this page. Try a different URL!',
+          description: 'Could not find structured recipe data on this page. Try a different URL or manually add the recipe!',
           variant: 'destructive' 
         });
       }
@@ -100,7 +101,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
       console.error('Scraping error:', error);
       toast({ 
         title: '❌ Scraping Failed', 
-        description: `Unable to extract recipes: ${error.message}`, 
+        description: `Unable to extract recipes: ${error.message}. This often happens if the website doesn't provide structured recipe data.`, 
         variant: 'destructive' 
       });
     } finally {

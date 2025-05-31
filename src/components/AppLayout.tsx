@@ -29,12 +29,18 @@ interface Recipe {
 const AppLayout: React.FC = () => {
   const { sidebarOpen, toggleSidebar } = useAppContext();
   const isMobile = useIsMobile();
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]); // This state will now primarily hold scraped/generated recipes before DB save, and then be updated by DB changes.
   const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
   const [shoppingList, setShoppingList] = useState<string[]>([]);
 
   const handleRecipeAdded = (recipe: Recipe) => {
-    setRecipes(prev => [...prev, recipe]);
+    setRecipes(prev => {
+      // Prevent adding duplicates if recipe already exists by ID
+      if (prev.some(r => r.id === recipe.id)) {
+        return prev;
+      }
+      return [...prev, recipe];
+    });
     toast({
       title: '🍽️ Recipe Added!',
       description: `${recipe.title} has been added to your collection.`
@@ -42,6 +48,7 @@ const AppLayout: React.FC = () => {
   };
 
   const handleRecipeRemoved = (id: string) => {
+    // This function is now primarily called by CookbookManager after DB deletion
     setRecipes(prev => prev.filter(recipe => recipe.id !== id));
   };
 
@@ -124,6 +131,7 @@ const AppLayout: React.FC = () => {
                       key={recipe.id}
                       recipe={recipe}
                       onAddToShoppingList={addToShoppingList}
+                      onRecipeAdded={handleRecipeAdded} // Pass this to allow adding from RecipeCard
                     />
                   ))}
                 </div>
@@ -134,7 +142,7 @@ const AppLayout: React.FC = () => {
           <div className={`space-y-6 ${
             isMobile ? 'order-2' : ''
           }`}>
-            <CookbookManager recipes={recipes} onRecipeRemoved={handleRecipeRemoved} />
+            <CookbookManager onRecipeRemoved={handleRecipeRemoved} />
             <FriendsList />
             <ShoppingList 
               recipes={recipes} 

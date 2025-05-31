@@ -131,7 +131,7 @@ const Index = () => {
                         <RecipeCard
                           key={recipe.id}
                           recipe={recipe}
-                          onRemove={handleRecipeRemoved}
+                          onAddToShoppingList={() => { /* Placeholder for now */ }}
                           onRecipeAdded={handleRecipeAdded} // Pass onRecipeAdded to RecipeCard
                         />
                       ))}
