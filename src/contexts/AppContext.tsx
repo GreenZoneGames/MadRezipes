@@ -63,7 +63,6 @@ interface AppContextType {
   createCookbook: (name: string, description?: string) => Promise<Cookbook | null>;
   addFriend: (email: string) => Promise<void>;
   removeFriend: (friendId: string) => Promise<void>;
-  shareRecipe: (recipeId: string, friendId: string) => Promise<void>;
   addRecipeToCookbook: (recipe: Recipe, cookbookId: string) => Promise<void>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   syncGuestDataToUser: () => Promise<void>; // New function to sync guest data
@@ -85,7 +84,6 @@ const defaultAppContext: AppContextType = {
   createCookbook: async () => null,
   addFriend: async () => {},
   removeFriend: async () => {},
-  shareRecipe: async () => {},
   addRecipeToCookbook: async () => {},
   sendPasswordResetEmail: async () => {},
   syncGuestDataToUser: async () => {},
@@ -389,21 +387,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const shareRecipe = async (recipeId: string, friendId: string) => {
-    if (!user) return; // Sharing always requires a user
-    
-    try {
-      const { error } = await supabase
-        .from('shared_recipes')
-        .insert({ recipe_id: recipeId, shared_by: user.id, shared_with: friendId });
-      
-      if (error) throw error;
-    } catch (error) {
-      console.error('Share recipe error:', error);
-      throw error;
-    }
-  };
-
   const addRecipeToCookbook = async (recipe: Recipe, cookbookId: string) => {
     if (!user) {
       // Guest mode: add to local storage
@@ -512,7 +495,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         createCookbook,
         addFriend,
         removeFriend,
-        shareRecipe,
         addRecipeToCookbook,
         sendPasswordResetEmail,
         syncGuestDataToUser,

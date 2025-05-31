@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Users, UserPlus, MessageSquare, Share2 } from 'lucide-react';
+import { Users, UserPlus, MessageSquare } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 
@@ -55,13 +55,6 @@ const CommunityFunctions: React.FC = () => {
         variant: 'destructive'
       });
     }
-  };
-
-  const shareRecipe = (friendEmail: string) => {
-    toast({
-      title: 'Recipe shared!',
-      description: `Recipe shared with ${friendEmail}`
-    });
   };
 
   const startConversation = (friendEmail: string) => {
@@ -143,13 +136,6 @@ const CommunityFunctions: React.FC = () => {
                           onClick={() => startConversation(friend.email)}
                         >
                           <MessageSquare className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => shareRecipe(friend.email)}
-                        >
-                          <Share2 className="h-4 w-4" />
                         </Button>
                       </>
                     )}

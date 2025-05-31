@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Users, ExternalLink, ChefHat, BookOpen, Plus } from 'lucide-react';
+import { Clock, Users, ExternalLink, ChefHat, BookOpen, Plus, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
+import QuickShareRecipe from './QuickShareRecipe'; // Import QuickShareRecipe
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -261,6 +262,18 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
               </div>
             </DialogContent>
           </Dialog>
+          {user && (
+            <QuickShareRecipe recipe={recipe}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 flex items-center gap-1"
+              >
+                <Share2 className="h-4 w-4" />
+                Share
+              </Button>
+            </QuickShareRecipe>
+          )}
         </div>
       </CardContent>
     </Card>
