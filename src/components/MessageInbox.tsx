@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
 import { MessageCircle, Send, Users } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { supabase } from '@/lib/supabase';
@@ -239,21 +240,21 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
         </DialogHeader>
         
         {showCompose && (
-          <div className="space-y-3 p-4 border rounded-lg bg-gray-50">
+          <div className="space-y-3 p-4 border rounded-lg bg-card border-border">
             <div className="space-y-2">
               <label className="text-sm font-medium">Send to:</label>
-              <select
-                value={selectedFriend}
-                onChange={(e) => setSelectedFriend(e.target.value)}
-                className="w-full p-2 border rounded-md"
-              >
-                <option value="">Select a friend...</option>
-                {friends.filter(f => f.status === 'accepted').map(friend => (
-                  <option key={friend.id} value={friend.friend_id === user?.id ? friend.user_id : friend.friend_id}>
-                    {friend.email}
-                  </option>
-                ))}
-              </select>
+              <Select value={selectedFriend} onValueChange={setSelectedFriend}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a friend..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {friends.filter(f => f.status === 'accepted').map(friend => (
+                    <SelectItem key={friend.id} value={friend.friend_id === user?.id ? friend.user_id : friend.friend_id}>
+                      {friend.username || friend.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Textarea
               placeholder="Write your message..."

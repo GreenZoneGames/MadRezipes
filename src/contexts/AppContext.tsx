@@ -22,6 +22,7 @@ interface Friend {
   user_id: string; // The ID of the user who sent/received the request
   friend_id: string; // The ID of the friend (the other user)
   email: string; // The email of the friend (for display)
+  username?: string; // Added username field
   status: 'pending' | 'accepted';
 }
 
@@ -159,7 +160,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           friend_id,
           status,
           users!friends_friend_id_fkey (
-            email
+            email,
+            username
           )
         `)
         .or(`user_id.eq.${userId},friend_id.eq.${userId}`); // Fetch requests where current user is sender or recipient
@@ -167,14 +169,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (error) throw error;
 
       const formattedFriends: Friend[] = (data || []).map((item: any) => {
-        const isSender = item.user_id === userId;
-        const friendEmail = isSender ? item.users.email : item.email; // Use item.email for recipient's email
+        // Determine which user in the 'friends' relationship is the actual 'friend' from the perspective of 'userId'
+        const friendUserData = item.users; // This refers to the 'friend_id' user's data
         
         return {
           id: item.id,
           user_id: item.user_id,
           friend_id: item.friend_id,
-          email: item.users.email, // This will be the email of the 'friend_id' user
+          email: friendUserData.email,
+          username: friendUserData.username,
           status: item.status,
         };
       });
