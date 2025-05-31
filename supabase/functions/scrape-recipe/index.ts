@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.43-alpha/deno-dom-wasm.ts";
+import { DOMParser } from "https://deno.land/x/deno_dom@v0.1.43/deno-dom-wasm.ts"; // Changed from v0.1.43-alpha to v0.1.43
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
