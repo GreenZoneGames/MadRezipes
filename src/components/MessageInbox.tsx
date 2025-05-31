@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'; // Added import for Dialog components
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -34,22 +34,21 @@ interface MessageInboxProps {
 const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
   const { user, friends } = useAppContext();
   const [messages, setMessages] = useState<Message[]>([]);
-  const [loading, setLoading] = useState(false);
+  // Removed loading state
   const [showCompose, setShowCompose] = useState(false);
-  const [newMessageContent, setNewMessageContent] = useState(''); // Renamed to avoid conflict
+  const [newMessageContent, setNewMessageContent] = useState('');
   const [selectedFriend, setSelectedFriend] = useState('');
   const [sending, setSending] = useState(false);
 
   const fetchMessages = async () => {
     if (!user) return;
     
-    setLoading(true);
     try {
       const { data, error } = await supabase
         .from('messages')
         .select('*')
-        .or(`recipient_id.eq.${user.id},sender_id.eq.${user.id}`) // Fetch messages where user is sender or recipient
-        .is('parent_message_id', null) // Only fetch top-level messages
+        .or(`recipient_id.eq.${user.id},sender_id.eq.${user.id}`)
+        .is('parent_message_id', null)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -59,8 +58,8 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
           const { data: replies } = await supabase
             .from('messages')
             .select('*')
-            .eq('thread_id', msg.thread_id || msg.id) // Fetch replies belonging to the same thread
-            .not('id', 'eq', msg.id) // Exclude the parent message itself
+            .eq('thread_id', msg.thread_id || msg.id)
+            .not('id', 'eq', msg.id)
             .order('created_at', { ascending: true });
           
           return { ...msg, replies: replies || [] };
@@ -74,8 +73,6 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
         description: error.message,
         variant: 'destructive'
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -85,7 +82,7 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
         .from('messages')
         .update({ read: true })
         .eq('id', messageId)
-        .eq('recipient_id', user?.id); // Ensure only recipient can mark as read
+        .eq('recipient_id', user?.id);
       
       setMessages(prev => 
         prev.map(msg => 
@@ -101,7 +98,7 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
     if (!user || !newMessageContent.trim() || !selectedFriend) return;
     
     setSending(true);
-    const tempId = uuidv4(); // Generate a temporary ID for optimistic update
+    const tempId = uuidv4();
     const newMsg: Message = {
       id: tempId,
       sender_id: user.id,
@@ -109,12 +106,11 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
       recipient_id: selectedFriend,
       content: newMessageContent.trim(),
       message_type: 'text',
-      created_at: new Date().toISOString(), // Use client time for optimistic display
+      created_at: new Date().toISOString(),
       read: false,
-      replies: [] // New top-level message has no replies initially
+      replies: []
     };
 
-    // Optimistically add the new message to the top of the list
     setMessages(prev => [newMsg, ...prev]);
     setNewMessageContent('');
     setSelectedFriend('');
@@ -133,7 +129,6 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
         });
       
       if (error) {
-        // If insert fails, remove the optimistically added message
         setMessages(prev => prev.filter(msg => msg.id !== tempId));
         throw error;
       }
@@ -160,7 +155,7 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
     if (!parentMessage) return;
     
     const replyRecipientId = parentMessage.sender_id;
-    const tempReplyId = uuidv4(); // Generate a temporary ID for the reply
+    const tempReplyId = uuidv4();
     const newReply: Message = {
       id: tempReplyId,
       sender_id: user.id,
@@ -174,7 +169,6 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
       read: false,
     };
 
-    // Optimistically add the reply to the parent message's replies array
     setMessages(prevMessages => prevMessages.map(msg => 
       msg.id === parentId 
         ? { ...msg, replies: [...(msg.replies || []), newReply] } 
@@ -195,7 +189,6 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
         });
       
       if (error) {
-        // If insert fails, remove the optimistically added reply
         setMessages(prevMessages => prevMessages.map(msg => 
           msg.id === parentId 
             ? { ...msg, replies: (msg.replies || []).filter(reply => reply.id !== tempReplyId) } 
@@ -290,11 +283,7 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
         )}
         
         <div className="space-y-3 min-h-[200px]">
-          {loading ? (
-            <div className="text-center py-4 text-muted-foreground">
-              Loading messages...
-            </div>
-          ) : messages.length === 0 ? (
+          {messages.length === 0 ? (
             <div className="text-center py-4 text-muted-foreground">
               <MessageCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>No messages yet</p>
