@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react-hook-form'; // Corrected import
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Plus, BookOpen, Save, UtensilsCrossed } from 'lucide-react';
@@ -39,6 +39,7 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
   const [showCreateCookbookDialog, setShowCreateCookbookDialog] = useState(false);
   const [newCookbookName, setNewCookbookName] = useState('');
   const [newCookbookDescription, setNewCookbookDescription] = useState('');
+  const [newCookbookIsPublic, setNewCookbookIsPublic] = useState(false);
   const [creatingCookbook, setCreatingCookbook] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -66,7 +67,7 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
     }
     setCreatingCookbook(true);
     try {
-      const newCookbook = await createCookbook(newCookbookName.trim(), newCookbookDescription.trim());
+      const newCookbook = await createCookbook(newCookbookName.trim(), newCookbookDescription.trim(), newCookbookIsPublic);
       setNewCookbookName('');
       setNewCookbookDescription('');
       toast({ title: 'Cookbook Created!', description: `"${newCookbookName}" has been created.` });

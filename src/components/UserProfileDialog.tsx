@@ -10,7 +10,7 @@ import { User, LogOut, Mail, Edit, Save, BookOpen, Heart, Loader2, Globe, Lock, 
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { useForm } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form'; // Corrected import
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
