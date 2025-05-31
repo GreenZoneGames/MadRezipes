@@ -24,24 +24,34 @@ const TopBar: React.FC = () => {
 
   const displayName = user?.username || user?.email?.split('@')[0] || 'User';
 
+  const handleMessageClick = () => {
+    if (user) {
+      setShowMessages(true);
+    } else {
+      setShowAuth(true);
+      toast({
+        title: 'Sign In Required',
+        description: 'Please sign in or register to access messages.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   return (
     <div className="flex items-center gap-3">
-      {/* Message Inbox Button - Always present if logged in */}
-      {user && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowMessages(true)}
-          className={cn(
-            "text-white hover:text-white hover:bg-white/10 transition-all duration-500 ease-in-out",
-            isLoggedIn ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-full"
-          )}
-          style={{ transitionDelay: isLoggedIn ? '200ms' : '0ms' }} // Delay appearance slightly
-        >
-          <MessageCircle className="h-4 w-4" />
-          {!isMobile && <span className="ml-1">Messages</span>}
-        </Button>
-      )}
+      {/* Message Inbox Button - Always present, behavior changes based on login */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleMessageClick}
+        className={cn(
+          "text-white hover:text-white hover:bg-white/10 transition-all duration-500 ease-in-out",
+          isLoggedIn ? "opacity-100 translate-x-0" : "opacity-100 translate-x-0" // Always visible, no animation for this one
+        )}
+      >
+        <MessageCircle className="h-4 w-4" />
+        {!isMobile && <span className="ml-1">Messages</span>}
+      </Button>
       
       {/* User Profile / Sign In Button */}
       {user ? (

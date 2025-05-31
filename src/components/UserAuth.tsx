@@ -55,37 +55,12 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange, onAuthSuccess }
     setLoading(true);
     try {
       if (isLogin) {
-        const { data: authData, error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password: password.trim()
+        await signIn(email.trim(), password.trim());
+        // AppContext's onAuthStateChange will handle fetching user data and updating state
+        toast({
+          title: `🍽️ Welcome back!`,
+          description: 'Successfully signed in to MadRezipes.'
         });
-        
-        if (error) throw error;
-        
-        // The checkUser in AppContext will handle fetching user data after sign-in
-        // No need to fetch user data here directly, AppContext handles it.
-        
-        // Fetch user data to get username for toast message
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('username, email')
-          .eq('id', authData.user?.id)
-          .single();
-
-        if (userError || !userData) {
-          console.error('Error fetching user data after sign-in:', userError);
-          toast({
-            title: 'Sign in successful, but profile data missing',
-            description: 'Please refresh the page or contact support.',
-            variant: 'destructive'
-          });
-        } else {
-          const displayUsername = userData?.username || userData?.email?.split('@')[0] || 'User';
-          toast({
-            title: `🍽️ Welcome back, ${displayUsername}!`,
-            description: 'Successfully signed in to MadRezipes.'
-          });
-        }
       } else { // isLogin is false, so it's signup
         await signUp(email.trim(), password.trim(), username.trim(), securityQuestion, securityAnswer.trim());
         
