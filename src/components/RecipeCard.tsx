@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Users, ExternalLink, ChefHat, BookOpen, Plus, Share2, Printer } from 'lucide-react';
+import { Clock, Users, ExternalLink, ChefHat, BookOpen, Plus, Share2, Printer, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import QuickShareRecipe from './QuickShareRecipe'; // Import QuickShareRecipe
+import RecipeComments from './RecipeComments'; // Import RecipeComments
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -32,6 +33,7 @@ interface Recipe {
   servings?: number;
   meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
   cookbook_id?: string; // Changed to snake_case
+  is_public?: boolean; // Added to indicate if the parent cookbook is public
 }
 
 interface RecipeCardProps {
@@ -405,6 +407,13 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
             <Printer className="h-4 w-4" />
             Print
           </Button>
+        </div>
+        {/* Recipe Comments Section */}
+        <div className="mt-6 pt-4 border-t border-border">
+          <h4 className="font-semibold mb-3 flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" /> Comments
+          </h4>
+          <RecipeComments recipeId={recipe.id} isRecipePublic={recipe.is_public || false} />
         </div>
       </CardContent>
     </Card>

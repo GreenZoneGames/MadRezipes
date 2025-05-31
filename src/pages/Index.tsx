@@ -13,6 +13,7 @@ import ManualRecipeForm from '@/components/ManualRecipeForm';
 import DirectMessageWindow from '@/components/DirectMessageWindow';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CookbookManager from '@/components/CookbookManager';
+import DiscoverRecipes from '@/components/DiscoverRecipes'; // Import new component
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -36,6 +37,7 @@ interface Recipe {
   servings?: number;
   meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string;
   cookbook_id?: string;
+  is_public?: boolean; // Added to indicate if the parent cookbook is public
 }
 
 interface OpenDmWindow {
@@ -107,11 +109,12 @@ const Index = () => {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-5"> {/* Increased grid columns */}
                 <TabsTrigger value="planner">Meal Planner</TabsTrigger>
                 <TabsTrigger value="community">Community</TabsTrigger>
-                <TabsTrigger value="recipes">Recipes</TabsTrigger>
+                <TabsTrigger value="recipes">My Cookbooks</TabsTrigger>
                 <TabsTrigger value="add-recipe">Add Recipe</TabsTrigger>
+                <TabsTrigger value="discover">Discover</TabsTrigger> {/* New Tab */}
               </TabsList>
               
               <TabsContent value="planner" className="space-y-6">
@@ -157,6 +160,10 @@ const Index = () => {
 
               <TabsContent value="add-recipe">
                 <ManualRecipeForm onRecipeAdded={handleRecipeAdded} />
+              </TabsContent>
+
+              <TabsContent value="discover"> {/* New Tab Content */}
+                <DiscoverRecipes onRecipeAdded={handleRecipeAdded} />
               </TabsContent>
             </Tabs>
           </div>
