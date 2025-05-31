@@ -69,8 +69,12 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
   const [editingCookbookIsPublic, setEditingCookbookIsPublic] = useState(false);
   const [isUpdatingCookbook, setIsUpdatingCookbook] = useState(false);
 
-  const currentCookbooks = user ? cookbooks : guestCookbooks;
-  const currentSelectedCookbook = selectedCookbook || (guestCookbooks.length > 0 ? guestCookbooks[0] : null);
+  // Ensure unique cookbooks for display
+  const uniqueCookbooks = Array.from(new Map(
+    (user ? cookbooks : guestCookbooks).map(cb => [cb.id, cb])
+  ).values());
+
+  const currentSelectedCookbook = selectedCookbook || (uniqueCookbooks.length > 0 ? uniqueCookbooks[0] : null);
 
   const { data: recipesInCookbook, isLoading: isLoadingRecipes } = useQuery<Recipe[]>({
     queryKey: ['recipes', user?.id, currentSelectedCookbook?.id],
@@ -110,19 +114,12 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
       setNewCookbookDescription('');
       setNewCookbookIsPublic(false);
       setShowCreateDialog(false);
-      toast({
-        title: '📚 Cookbook Created!',
-        description: `"${newCookbookName}" has been added to your collection.`
-      });
       if (newCb) {
         setSelectedCookbook(newCb); // Automatically select the newly created cookbook
       }
     } catch (error: any) {
-      toast({
-        title: 'Creation Failed',
-        description: error.message || 'Failed to create cookbook.',
-        variant: 'destructive'
-      });
+      // Toast is already handled in AppContext for duplicate names
+      console.error('Creation Failed:', error.message);
     } finally {
       setLoading(false);
     }
@@ -308,7 +305,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
           <Select
             value={currentSelectedCookbook?.id || ''}
             onValueChange={(value) => {
-              const cookbook = currentCookbooks.find(c => c.id === value);
+              const cookbook = uniqueCookbooks.find(c => c.id === value);
               setSelectedCookbook(cookbook || null);
             }}
           >
@@ -316,7 +313,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
               <SelectValue placeholder="Select a cookbook" />
             </SelectTrigger>
             <SelectContent>
-              {currentCookbooks.map(cookbook => (
+              {uniqueCookbooks.map(cookbook => (
                 <SelectItem key={cookbook.id} value={cookbook.id}>
                   {cookbook.name} {cookbook.user_id === 'guest' && '(Unsaved)'}
                 </SelectItem>
@@ -324,7 +321,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
             </SelectContent>
           </Select>
 
-          {currentCookbooks.length === 0 && (
+          {uniqueCookbooks.length === 0 && (
             <p className="text-muted-foreground text-center py-4 text-sm">
               No cookbooks yet. Create your first one!
             </p>
@@ -432,7 +429,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
               <Textarea
                 placeholder="Description (optional)"
                 value={editingCookbookDescription}
-                onChange={(e) => setEditingCookbookDescription(e.target.value)}
+                onChange={(e) => setNewCookbookDescription(e.target.value)}
                 disabled={isUpdatingCookbook}
                 rows={3}
               />

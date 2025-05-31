@@ -412,7 +412,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const createCookbook = async (name: string, description?: string, isPublic: boolean = false): Promise<Cookbook | null> => {
     if (!user) {
-      // Guest mode: create in local storage
+      // Guest mode: Check for existing guest cookbook by name
+      const existingGuestCookbook = guestCookbooks.find(cb => cb.name.toLowerCase() === name.toLowerCase());
+      if (existingGuestCookbook) {
+        toast({
+          title: 'Cookbook Exists',
+          description: `A temporary cookbook named "${name}" already exists.`,
+          variant: 'destructive',
+        });
+        return existingGuestCookbook;
+      }
+
       const newGuestCookbook: Cookbook = {
         id: uuidv4(),
         name,
@@ -425,6 +435,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     
     try {
+      // Logged-in user: Check for existing cookbook by name and user_id
+      const { data: existingCookbook, error: fetchError } = await supabase
+        .from('cookbooks')
+        .select('*')
+        .eq('user_id', user.id)
+        .ilike('name', name) // Case-insensitive check
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 means no rows found, which is fine
+        throw fetchError;
+      }
+
+      if (existingCookbook) {
+        toast({
+          title: 'Cookbook Exists',
+          description: `A cookbook named "${name}" already exists.`,
+          variant: 'destructive',
+        });
+        return existingCookbook;
+      }
+
       const { data, error } = await supabase
         .from('cookbooks')
         .insert({ name, description, user_id: user.id, is_public: isPublic })
