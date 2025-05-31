@@ -42,7 +42,7 @@ interface ShoppingListProps {
 }
 
 const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChange, mealPlan = [] }) => {
-  const [checkedItems, setCheckedItems] = new Set<string>();
+  const [checkedItems, setCheckedItems] = useState(new Set<string>()); // Corrected initialization
   const [showByCategory, setShowByCategory] = useState(true);
 
   const calculateIngredientsWithServings = () => {
