@@ -22,7 +22,7 @@ const securityQuestions = [
 ];
 
 const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
-  const { signIn, signUp, sendPasswordResetEmail, user: currentUser } = useAppContext(); // Get currentUser from context
+  const { signIn, signUp, sendPasswordResetEmail } = useAppContext();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -54,7 +54,7 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
     setLoading(true);
     try {
       if (isLogin) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: authData, error } = await supabase.auth.signInWithPassword({ // Renamed data to authData
           email: email.trim(),
           password: password.trim()
         });
@@ -65,7 +65,7 @@ const UserAuth: React.FC<UserAuthProps> = ({ open, onOpenChange }) => {
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('username, email')
-          .eq('id', data.user?.id)
+          .eq('id', authData.user?.id) // Used authData.user?.id
           .single();
 
         if (userError) {
