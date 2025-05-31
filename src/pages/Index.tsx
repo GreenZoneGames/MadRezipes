@@ -8,7 +8,7 @@ import MealPlanner, { MealPlan } from '@/components/MealPlanner';
 import ShoppingList from '@/components/ShoppingList';
 import ShoppingListPDF from '@/components/ShoppingListPDF';
 import MealExporter from '@/components/MealExporter';
-import CommunityFunctions from '@/components/CommunityFunctions';
+import FriendsList from '@/components/FriendsList'; // Correctly import FriendsList
 import ManualRecipeForm from '@/components/ManualRecipeForm';
 import DirectMessageWindow from '@/components/DirectMessageWindow'; // Import DirectMessageWindow
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -140,7 +140,7 @@ const Index = () => {
               </TabsContent>
               
               <TabsContent value="community">
-                <CommunityFunctions />
+                {/* CommunityFunctions was removed as FriendsList now handles all friend management UI */}
                 <FriendsList onOpenDm={handleOpenDm} /> {/* Pass the DM handler */}
               </TabsContent>
               
