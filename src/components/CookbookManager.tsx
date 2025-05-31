@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch'; // Import Switch
 import { Label } from '@/components/ui/label'; // Import Label
-import { BookOpen, Plus, Trash2, Edit, Loader2, Save, Globe, Lock } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Edit, Loader2, Save, Globe, Lock, Copy } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -64,7 +64,7 @@ interface CookbookManagerProps {
 }
 
 const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) => {
-  const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy, deleteCookbook } = useAppContext();
+  const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy, deleteCookbook, copyCookbook } = useAppContext();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newCookbookName, setNewCookbookName] = useState('');
   const [newCookbookDescription, setNewCookbookDescription] = useState('');
@@ -79,6 +79,13 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
   const [editingCookbookDescription, setEditingCookbookDescription] = useState('');
   const [editingCookbookIsPublic, setEditingCookbookIsPublic] = useState(false);
   const [isUpdatingCookbook, setIsUpdatingCookbook] = useState(false);
+
+  // State for Copy Cookbook Dialog
+  const [showCopyCookbookDialog, setShowCopyCookbookDialog] = useState(false);
+  const [cookbookToCopyId, setCookbookToCopyId] = useState('');
+  const [copiedCookbookName, setCopiedCookbookName] = useState('');
+  const [copiedCookbookIsPublic, setCopiedCookbookIsPublic] = useState(false);
+  const [isCopyingCookbook, setIsCopyingCookbook] = useState(false);
 
   // Ensure unique cookbooks for display
   const uniqueCookbooks = Array.from(new Map(
@@ -240,6 +247,47 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
     }
   };
 
+  const handleCopyCookbook = async () => {
+    if (!user) {
+      toast({
+        title: 'Sign In Required',
+        description: 'Please sign in to copy cookbooks.',
+        variant: 'destructive'
+      });
+      setShowAuthDialog(true);
+      return;
+    }
+    if (!cookbookToCopyId.trim()) {
+      toast({
+        title: 'Cookbook ID Required',
+        description: 'Please enter the ID of the cookbook you want to copy.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    if (!copiedCookbookName.trim()) {
+      toast({
+        title: 'New Name Required',
+        description: 'Please enter a name for your new cookbook.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsCopyingCookbook(true);
+    try {
+      await copyCookbook(cookbookToCopyId.trim(), copiedCookbookName.trim(), copiedCookbookIsPublic);
+      setCookbookToCopyId('');
+      setCopiedCookbookName('');
+      setCopiedCookbookIsPublic(false);
+      setShowCopyCookbookDialog(false);
+    } catch (error) {
+      // Toast handled by copyCookbook function in AppContext
+    } finally {
+      setIsCopyingCookbook(false);
+    }
+  };
+
   const handleSaveToAccount = () => {
     if (!user) {
       setShowAuthDialog(true); // Open login/signup dialog
@@ -324,6 +372,71 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
                 </div>
               </DialogContent>
             </Dialog>
+            {user && (
+              <Dialog open={showCopyCookbookDialog} onOpenChange={setShowCopyCookbookDialog}>
+                <DialogTrigger asChild>
+                  <Button size="sm" variant="outline" className="text-purple-500 hover:text-purple-600 border-purple-300">
+                    <Copy className="h-4 w-4 mr-1" />
+                    Copy
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Copy className="h-5 w-5" />
+                      Copy Public Cookbook
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Enter the ID of a public cookbook you wish to copy to your collection.
+                    </p>
+                    <Input
+                      placeholder="Public Cookbook ID"
+                      value={cookbookToCopyId}
+                      onChange={(e) => setCookbookToCopyId(e.target.value)}
+                      disabled={isCopyingCookbook}
+                    />
+                    <Input
+                      placeholder="New name for your copy (e.g., 'My Italian Favorites')"
+                      value={copiedCookbookName}
+                      onChange={(e) => setCopiedCookbookName(e.target.value)}
+                      disabled={isCopyingCookbook}
+                    />
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="copied-cookbook-public"
+                        checked={copiedCookbookIsPublic}
+                        onCheckedChange={setCopiedCookbookIsPublic}
+                        disabled={isCopyingCookbook}
+                      />
+                      <Label htmlFor="copied-cookbook-public">
+                        {copiedCookbookIsPublic ? (
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Globe className="h-4 w-4" /> Make Public
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Lock className="h-4 w-4" /> Keep Private
+                          </span>
+                        )}
+                      </Label>
+                    </div>
+                    <Button onClick={handleCopyCookbook} disabled={isCopyingCookbook || !cookbookToCopyId.trim() || !copiedCookbookName.trim()} className="w-full">
+                      {isCopyingCookbook ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Copying...
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4 mr-2" /> Copy Cookbook
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         </CardTitle>
       </CardHeader>

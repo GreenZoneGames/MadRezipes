@@ -72,6 +72,7 @@ interface AppContextType {
   updateUserProfile: (updates: Partial<User>) => Promise<void>; // New
   updateCookbookPrivacy: (cookbookId: string, isPublic: boolean) => Promise<void>; // New
   deleteCookbook: (cookbookId: string) => Promise<void>; // New
+  copyCookbook: (cookbookId: string, newName: string, isPublic: boolean) => Promise<void>; // New
   addFriend: (email: string) => Promise<void>;
   removeFriend: (friendId: string) => Promise<void>;
   acceptFriendRequest: (requestId: string, friendUserId: string) => Promise<void>; // New function
@@ -99,6 +100,7 @@ const defaultAppContext: AppContextType = {
   updateUserProfile: async () => {}, // Dummy
   updateCookbookPrivacy: async () => {}, // Dummy
   deleteCookbook: async () => {}, // Dummy
+  copyCookbook: async () => {}, // Dummy
   addFriend: async () => {},
   removeFriend: async () => {},
   acceptFriendRequest: async () => {}, // Dummy function
@@ -560,6 +562,97 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const copyCookbook = async (cookbookId: string, newName: string, isPublic: boolean) => {
+    if (!user) {
+      throw new Error('You must be logged in to copy cookbooks.');
+    }
+
+    try {
+      // 1. Fetch the source cookbook and its recipes
+      const { data: sourceCookbook, error: sourceCookbookError } = await supabase
+        .from('cookbooks')
+        .select('*')
+        .eq('id', cookbookId)
+        .eq('is_public', true) // Only allow copying public cookbooks
+        .single();
+
+      if (sourceCookbookError || !sourceCookbook) {
+        throw new Error('Public cookbook not found or not accessible.');
+      }
+
+      const { data: sourceRecipes, error: sourceRecipesError } = await supabase
+        .from('recipes')
+        .select('*')
+        .eq('cookbook_id', cookbookId);
+
+      if (sourceRecipesError) {
+        throw sourceRecipesError;
+      }
+
+      // 2. Create a new cookbook for the current user
+      const { data: newCookbook, error: newCookbookError } = await supabase
+        .from('cookbooks')
+        .insert({
+          name: newName,
+          description: sourceCookbook.description,
+          user_id: user.id,
+          is_public: isPublic,
+        })
+        .select()
+        .single();
+
+      if (newCookbookError) {
+        throw newCookbookError;
+      }
+
+      // 3. Copy recipes to the new cookbook
+      if (sourceRecipes && sourceRecipes.length > 0) {
+        const recipesToInsert = sourceRecipes.map(recipe => ({
+          user_id: user.id,
+          cookbook_id: newCookbook.id,
+          title: recipe.title,
+          ingredients: recipe.ingredients,
+          instructions: recipe.instructions,
+          url: recipe.url,
+          image: recipe.image,
+          cook_time: recipe.cook_time,
+          servings: recipe.servings,
+          meal_type: recipe.meal_type,
+          categorized_ingredients: recipe.categorized_ingredients,
+        }));
+
+        const { error: insertRecipesError } = await supabase
+          .from('recipes')
+          .insert(recipesToInsert);
+
+        if (insertRecipesError) {
+          // If recipe insertion fails, consider deleting the newly created cookbook to clean up
+          await supabase.from('cookbooks').delete().eq('id', newCookbook.id);
+          throw insertRecipesError;
+        }
+      }
+
+      // 4. Update local state and invalidate queries
+      setCookbooks(prev => [...prev, newCookbook]);
+      setSelectedCookbook(newCookbook); // Select the newly copied cookbook
+      queryClient.invalidateQueries({ queryKey: ['cookbooks', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['recipes', user.id, newCookbook.id] });
+
+      toast({
+        title: 'Cookbook Copied!',
+        description: `"${sourceCookbook.name}" has been copied to your cookbooks as "${newName}".`,
+      });
+
+    } catch (error: any) {
+      console.error('Error copying cookbook:', error);
+      toast({
+        title: 'Failed to Copy Cookbook',
+        description: error.message || 'An error occurred while copying the cookbook.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const addFriend = async (email: string) => {
     if (!user) {
       throw new Error('You must be logged in to send friend requests.');
@@ -793,6 +886,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateUserProfile, // Added
         updateCookbookPrivacy, // Added
         deleteCookbook, // Added
+        copyCookbook, // Added
         addFriend,
         removeFriend,
         acceptFriendRequest,
