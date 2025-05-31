@@ -6,15 +6,26 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch'; // Import Switch
 import { Label } from '@/components/ui/label'; // Import Label
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
-import { User, LogOut, Mail, Edit, Save, BookOpen, Heart, Loader2, Globe, Lock } from 'lucide-react';
+import { User, LogOut, Mail, Edit, Save, BookOpen, Heart, Loader2, Globe, Lock, Trash2 } from 'lucide-react'; // Import Trash2
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { useForm } from 'react-hook-form';
+import { useForm } from '@hookform/resolvers/zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"; // Import AlertDialog components
 
 interface UserProfileDialogProps {
   open: boolean;
@@ -30,7 +41,7 @@ const profileSchema = z.object({
 });
 
 const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChange }) => {
-  const { user, signOut, cookbooks, updateUserProfile, updateCookbookPrivacy } = useAppContext();
+  const { user, signOut, cookbooks, updateUserProfile, updateCookbookPrivacy, deleteCookbook } = useAppContext(); // Destructure deleteCookbook
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -130,6 +141,22 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
     }
   };
 
+  const handleDeleteCookbook = async (cookbookId: string, cookbookName: string) => {
+    try {
+      await deleteCookbook(cookbookId);
+      toast({
+        title: 'Cookbook Deleted!',
+        description: `"${cookbookName}" and all its recipes have been removed.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Deletion Failed',
+        description: error.message || 'An error occurred while deleting the cookbook.',
+        variant: 'destructive'
+      });
+    }
+  };
+
   if (!user) {
     return null; // Should not be rendered if no user is logged in
   }
@@ -211,6 +238,30 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
                             checked={cb.is_public}
                             onCheckedChange={(checked) => handleCookbookPrivacyChange(cb.id, checked)}
                           />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  This action cannot be undone. This will permanently delete the cookbook "{cb.name}" and all recipes within it.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteCookbook(cb.id, cb.name)}
+                                  className="bg-destructive hover:bg-destructive/90"
+                                >
+                                  Delete Cookbook
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     ))}
