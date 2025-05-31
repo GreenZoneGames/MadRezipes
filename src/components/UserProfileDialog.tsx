@@ -3,14 +3,14 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch'; // Import Switch
-import { Label } from '@/components/ui/label'; // Import Label
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'; // Import Select components
-import { User, LogOut, Mail, Edit, Save, BookOpen, Heart, Loader2, Globe, Lock, Trash2 } from 'lucide-react'; // Import Trash2
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { User, LogOut, Mail, Edit, Save, BookOpen, Heart, Loader2, Globe, Lock, Trash2 } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
-import { useForm } from 'react-hook-form'; // Corrected import
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useQuery } from '@tanstack/react-query';
@@ -25,14 +25,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"; // Import AlertDialog components
+} from "@/components/ui/alert-dialog";
 
 interface UserProfileDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-// Define Zod schema for profile editing
 const profileSchema = z.object({
   username: z.string().min(1, { message: 'Username is required.' }).optional().or(z.literal('')),
   avatar_url: z.string().url({ message: 'Must be a valid URL.' }).optional().or(z.literal('')),
@@ -41,7 +40,7 @@ const profileSchema = z.object({
 });
 
 const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChange }) => {
-  const { user, signOut, cookbooks, updateUserProfile, updateCookbookPrivacy, deleteCookbook } = useAppContext(); // Destructure deleteCookbook
+  const { user, signOut, cookbooks, updateUserProfile, updateCookbookPrivacy, deleteCookbook } = useAppContext();
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
 
@@ -55,7 +54,6 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
     },
   });
 
-  // Fetch user's recipes for the favorite recipe dropdown
   const { data: userRecipes, isLoading: isLoadingUserRecipes } = useQuery({
     queryKey: ['userRecipes', user?.id],
     queryFn: async () => {
@@ -67,20 +65,28 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
       if (error) throw error;
       return data || [];
     },
-    enabled: !!user && isEditingProfile, // Only fetch when user is logged in and editing
+    enabled: !!user && isEditingProfile,
   });
 
+  // Effect 1: Populate form data when dialog opens or user data changes
   useEffect(() => {
-    if (user && open) {
+    if (open && user) {
       form.reset({
         username: user.username || '',
         avatar_url: user.avatar_url || '',
         bio: user.bio || '',
         favorite_recipe_id: user.favorite_recipe_id || '',
       });
-      setIsEditingProfile(false); // Reset to view mode when dialog opens
     }
-  }, [user, open, form]);
+  }, [open, user, form]);
+
+  // Effect 2: Ensure dialog starts in view mode when it opens
+  useEffect(() => {
+    if (open) {
+      setIsEditingProfile(false);
+    }
+  }, [open]);
+
 
   const handleSignOut = async () => {
     try {
@@ -89,7 +95,7 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
         title: '👋 Goodbye!',
         description: 'Successfully signed out of MadRezipes.'
       });
-      onOpenChange(false); // Close the dialog after signing out
+      onOpenChange(false);
     } catch (error: any) {
       toast({
         title: 'Sign out failed',
@@ -113,7 +119,7 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
         title: 'Profile Updated!',
         description: 'Your profile has been successfully updated.'
       });
-      setIsEditingProfile(false);
+      setIsEditingProfile(false); // Exit editing mode on save
     } catch (error: any) {
       toast({
         title: 'Profile Update Failed',
@@ -158,7 +164,7 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
   };
 
   if (!user) {
-    return null; // Should not be rendered if no user is logged in
+    return null;
   }
 
   const displayName = user.username || user.email?.split('@')[0] || 'User';
@@ -174,7 +180,6 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-6 py-4">
-          {/* Profile Display Section */}
           {!isEditingProfile ? (
             <div className="space-y-4">
               <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg border border-border">
@@ -214,7 +219,6 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
                 </div>
               )}
 
-              {/* Cookbooks Section */}
               <div className="space-y-3">
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <BookOpen className="h-5 w-5" /> Your Cookbooks
@@ -270,7 +274,6 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
               </div>
             </div>
           ) : (
-            // Profile Editing Section
             <form onSubmit={form.handleSubmit(handleSaveProfile)} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
