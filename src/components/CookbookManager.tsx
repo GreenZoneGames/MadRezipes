@@ -95,9 +95,9 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
 
   // Debugging: Log setActiveTab when component renders
   useEffect(() => {
-    console.log('CookbookManager: setActiveTab prop type:', typeof setActiveTab);
+    console.log('CookbookManager: setActiveTab prop type (on render):', typeof setActiveTab);
     if (typeof setActiveTab !== 'function') {
-      console.error('CookbookManager: setActiveTab is NOT a function!', setActiveTab);
+      console.error('CookbookManager: setActiveTab is NOT a function on render!', setActiveTab);
     }
   }, [setActiveTab]);
 
@@ -360,6 +360,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   };
 
   const handlePlanWithCookbook = () => {
+    console.log('handlePlanWithCookbook called. Type of setActiveTab:', typeof setActiveTab); // New log
     if (currentSelectedCookbook) {
       setSelectedCookbook(currentSelectedCookbook);
       // Ensure setActiveTab is a function before calling it
@@ -770,7 +771,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
               <Textarea
                 placeholder="Description (optional)"
                 value={editingCookbookDescription}
-                onChange={(e) => setEditingCookbookDescription(e.target.value)}
+                onChange={(e) => setNewCookbookDescription(e.target.value)}
                 disabled={isUpdatingCookbook}
                 rows={3}
               />
