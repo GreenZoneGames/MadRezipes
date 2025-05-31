@@ -12,7 +12,7 @@ interface Recipe {
   image?: string;
   cook_time?: string; // Changed to snake_case
   servings?: number;
-  meal_type?: string; // Changed to snake_case
+  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
 }
 
 export interface MealPlan {
@@ -27,11 +27,14 @@ interface MealCalendarProps {
 }
 
 const MealCalendar: React.FC<MealCalendarProps> = ({ mealPlan, selectedMonth }) => {
-  const getMealIcon = (mealType: 'breakfast' | 'lunch' | 'dinner') => {
-    switch (mealType) {
+  const getMealIcon = (mealType: 'breakfast' | 'lunch' | 'dinner' | string) => {
+    switch (mealType.toLowerCase()) {
       case 'breakfast': return '☀️';
       case 'lunch': return '🍽️';
       case 'dinner': return '🌙';
+      case 'appetizer': return '🍢'; // New icon for appetizer
+      case 'dessert': return '🍰'; // New icon for dessert
+      case 'snack': return '🥨'; // New icon for snack
       default: return '🍽️';
     }
   };

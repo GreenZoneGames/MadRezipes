@@ -26,7 +26,7 @@ const formSchema = z.object({
     (val) => (val === '' ? undefined : Number(val)),
     z.number().int().positive({ message: 'Servings must be a positive number.' }).optional()
   ),
-  mealType: z.string().optional(),
+  mealType: z.enum(['Breakfast', 'Lunch', 'Dinner', 'Appetizer', 'Dessert', 'Snack']).optional().or(z.literal('')),
   cookbookId: z.string().min(1, { message: 'Please select a cookbook.' }),
 });
 
@@ -245,6 +245,7 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
                         <SelectItem value="Breakfast">Breakfast</SelectItem>
                         <SelectItem value="Lunch">Lunch</SelectItem>
                         <SelectItem value="Dinner">Dinner</SelectItem>
+                        <SelectItem value="Appetizer">Appetizer</SelectItem>
                         <SelectItem value="Dessert">Dessert</SelectItem>
                         <SelectItem value="Snack">Snack</SelectItem>
                       </SelectContent>

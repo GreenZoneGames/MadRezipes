@@ -15,13 +15,13 @@ interface Recipe {
   image?: string;
   cook_time?: string; // Changed to snake_case
   servings?: number;
-  meal_type?: string; // Changed to snake_case
+  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
 }
 
 export interface MealPlan {
   date: string;
   recipe: Recipe;
-  mealType?: 'breakfast' | 'lunch' | 'dinner';
+  mealType?: 'breakfast' | 'lunch' | 'dinner'; // Keep these for daily planning slots
 }
 
 interface MealPlannerProps {
@@ -46,10 +46,17 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const mealTypes: ('breakfast' | 'lunch' | 'dinner')[] = ['breakfast', 'lunch', 'dinner'];
+  const mealTypes: ('breakfast' | 'lunch' | 'dinner')[] = ['breakfast', 'lunch', 'dinner']; // These are the daily slots
 
   const generateRandomPlan = () => {
-    if (recipes.length === 0 || !selectedMonth) return;
+    if (recipes.length === 0 || !selectedMonth) {
+      toast({ 
+        title: '🍽️ No Recipes Available', 
+        description: 'Please add some recipes first to generate a meal plan!',
+        variant: 'destructive'
+      });
+      return;
+    }
 
     const currentDate = new Date();
     const year = currentDate.getFullYear();
@@ -60,11 +67,23 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
     // Generate meals for full month with breakfast, lunch, dinner
     for (let day = 1; day <= daysInMonth; day++) {
       mealTypes.forEach(mealType => {
-        const randomRecipe = recipes[Math.floor(Math.random() * recipes.length)];
+        // Try to find a recipe matching the meal type
+        const matchingRecipes = recipes.filter(r => 
+          r.meal_type?.toLowerCase() === mealType.toLowerCase()
+        );
+        
+        let selectedRecipe: Recipe;
+        if (matchingRecipes.length > 0) {
+          selectedRecipe = matchingRecipes[Math.floor(Math.random() * matchingRecipes.length)];
+        } else {
+          // Fallback to any random recipe if no specific meal type match
+          selectedRecipe = recipes[Math.floor(Math.random() * recipes.length)];
+        }
+
         const dateStr = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         newPlan.push({
           date: dateStr,
-          recipe: randomRecipe,
+          recipe: selectedRecipe,
           mealType
         });
       });

@@ -24,7 +24,7 @@ interface Recipe {
   image?: string;
   cook_time?: string; // Changed to snake_case
   servings?: number;
-  meal_type?: string; // Changed to snake_case
+  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
 }
 
 interface MealPlan {
@@ -42,7 +42,7 @@ interface ShoppingListProps {
 }
 
 const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChange, mealPlan = [] }) => {
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set());
+  const [checkedItems, setCheckedItems] = new Set<string>();
   const [showByCategory, setShowByCategory] = useState(true);
 
   const calculateIngredientsWithServings = () => {

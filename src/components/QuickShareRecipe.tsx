@@ -14,6 +14,7 @@ interface Recipe {
   ingredients: string[];
   instructions: string[];
   url?: string;
+  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string;
 }
 
 interface Friend {

@@ -13,7 +13,7 @@ interface Recipe {
   image?: string;
   cook_time?: string; // Changed to snake_case
   servings?: number;
-  meal_type?: string; // Changed to snake_case
+  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
 }
 
 interface MealPlan {

@@ -47,7 +47,7 @@ interface Recipe {
   image?: string;
   cook_time?: string; // Matches DB column name
   servings?: number;
-  meal_type?: string; // Matches DB column name
+  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Matches DB column name
   cookbook_id?: string; // Matches DB column name
   categorized_ingredients?: CategorizedIngredients; // Matches DB column name
 }

@@ -9,6 +9,19 @@ import { supabase } from '@/lib/supabase';
 import { toast } from '@/components/ui/use-toast';
 import RecipeCard from './RecipeCard'; // Import RecipeCard
 
+interface Recipe {
+  id: string;
+  title: string;
+  ingredients: string[];
+  instructions: string[];
+  url: string;
+  image?: string;
+  cook_time?: string; // Changed to snake_case
+  servings?: number;
+  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
+  cookbook_id?: string; // Changed to snake_case
+}
+
 interface Message {
   id: string;
   sender_id: string;
@@ -18,7 +31,7 @@ interface Message {
   thread_id?: string;
   message_type: 'text' | 'recipe';
   content: string;
-  recipe_data?: any;
+  recipe_data?: Recipe; // Use the updated Recipe interface
   created_at: string;
   read: boolean;
   replies?: Message[];
@@ -59,7 +72,7 @@ const ThreadedMessage: React.FC<ThreadedMessageProps> = ({ message, onReply, dep
     }
   };
 
-  const handleAddRecipeToCollection = async (recipe: any) => {
+  const handleAddRecipeToCollection = async (recipe: Recipe) => {
     if (!user) {
       toast({
         title: 'Sign In Required',

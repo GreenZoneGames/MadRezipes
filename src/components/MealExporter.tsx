@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Download, Calendar, ShoppingCart } from 'lucide-react'; // Removed Coffee, Utensils, Moon
+import { Download, Calendar, ShoppingCart } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 
 interface Recipe {
@@ -13,7 +13,7 @@ interface Recipe {
   image?: string;
   cook_time?: string; // Changed to snake_case
   servings?: number;
-  meal_type?: string; // Changed to snake_case
+  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
 }
 
 interface MealPlan {
@@ -66,10 +66,13 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
   };
 
   const getMealIcon = (mealType: string) => {
-    switch (mealType) {
+    switch (mealType.toLowerCase()) {
       case 'breakfast': return '☀️';
       case 'lunch': return '🍽️';
       case 'dinner': return '🌙';
+      case 'appetizer': return '🍢'; // New icon for appetizer
+      case 'dessert': return '🍰'; // New icon for dessert
+      case 'snack': return '🥨'; // New icon for snack
       default: return '🍽️';
     }
   };
@@ -234,12 +237,12 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
             Export Full Month Calendar PDF
           </Button>
           
-          <div className="text-sm text-muted-foreground space-y-1 text-center"> {/* Added text-center here */}
+          <div className="text-sm text-muted-foreground space-y-1 text-center">
             <div className="flex items-center justify-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />
               <span>Full month calendar with meal titles and icons</span>
             </div>
-            <div className="flex items-center justify-center gap-2"> {/* This div already has justify-center */}
+            <div className="flex items-center justify-center gap-2">
               <span>☀️ Breakfast</span>
               <span>🍽️ Lunch</span>
               <span>🌙 Dinner</span>
