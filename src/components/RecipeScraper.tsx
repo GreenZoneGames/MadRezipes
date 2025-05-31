@@ -44,7 +44,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [scrapedRecipes, setScrapedRecipes] = useState<Recipe[]>([]);
-  const [selectedRecipes, setSelectedRecipes] = new Set());
+  const [selectedRecipes, setSelectedRecipes] = useState(new Set<string>()); // Fixed this line
   const [showCookbookDialog, setShowCookbookDialog] = useState(false);
   const [selectedCookbookId, setSelectedCookbookId] = useState('');
   const [newCookbookName, setNewCookbookName] = useState('');
