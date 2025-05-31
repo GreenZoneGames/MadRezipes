@@ -19,6 +19,17 @@ interface Cookbook {
   description?: string;
   user_id: string;
   is_public: boolean; // New
+  is_owner?: boolean; // Added for UI convenience
+  is_collaborator?: boolean; // Added for UI convenience
+}
+
+interface CookbookInvitation {
+  id: string;
+  cookbook_id: string;
+  cookbook_name: string;
+  invited_by_user_id: string;
+  invited_by_username: string;
+  status: 'pending' | 'accepted' | 'rejected';
 }
 
 interface Friend {
@@ -80,6 +91,7 @@ interface AppContextType {
   guestCookbooks: Cookbook[]; // New state for guest cookbooks
   guestRecipes: Recipe[]; // New state for guest recipes
   savedMealPlans: SavedMealPlan[]; // New state for saved meal plans
+  cookbookInvitations: CookbookInvitation[]; // New state for cookbook invitations
   setGuestRecipes: React.Dispatch<React.SetStateAction<Recipe[]>>; // Added to default context
   setSelectedCookbook: (cookbook: Cookbook | null) => void;
   signIn: (email: string, password: string) => Promise<void>;
@@ -100,6 +112,10 @@ interface AppContextType {
   saveMealPlan: (name: string, month: string, year: number, planData: MealPlanEntry[]) => Promise<void>; // New
   loadMealPlans: (userId: string) => Promise<void>; // New
   deleteMealPlan: (planId: string) => Promise<void>; // New
+  inviteCollaborator: (cookbookId: string, collaboratorEmail: string) => Promise<void>; // New
+  acceptCookbookInvitation: (invitationId: string) => Promise<void>; // New
+  rejectCookbookInvitation: (invitationId: string) => Promise<void>; // New
+  removeCollaborator: (cookbookId: string, collaboratorUserId: string) => Promise<void>; // New
 }
 
 const defaultAppContext: AppContextType = {
@@ -112,6 +128,7 @@ const defaultAppContext: AppContextType = {
   guestCookbooks: [],
   guestRecipes: [],
   savedMealPlans: [], // Default for new state
+  cookbookInvitations: [], // Default for new state
   setGuestRecipes: () => {}, // Dummy function added here
   setSelectedCookbook: () => {},
   signIn: async () => {},
@@ -132,6 +149,10 @@ const defaultAppContext: AppContextType = {
   saveMealPlan: async () => {}, // Dummy
   loadMealPlans: async () => {}, // Dummy
   deleteMealPlan: async () => {}, // Dummy
+  inviteCollaborator: async () => {}, // Dummy
+  acceptCookbookInvitation: async () => {}, // Dummy
+  rejectCookbookInvitation: async () => {}, // Dummy
+  removeCollaborator: async () => {}, // Dummy
 };
 
 const AppContext = createContext<AppContextType>(defaultAppContext);
@@ -146,6 +167,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [selectedCookbook, setSelectedCookbook] = useState<Cookbook | null>(null);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [savedMealPlans, setSavedMealPlans] = useState<SavedMealPlan[]>([]); // New state
+  const [cookbookInvitations, setCookbookInvitations] = useState<CookbookInvitation[]>([]); // New state
   const [guestCookbooks, setGuestCookbooks] = useState<Cookbook[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('guestCookbooks');
@@ -175,16 +197,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const loadCookbooks = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      // Fetch cookbooks owned by the user
+      const { data: ownedCookbooks, error: ownedError } = await supabase
         .from('cookbooks')
         .select('*')
         .eq('user_id', userId);
-      
-      if (error) throw error;
-      setCookbooks(data || []);
+      if (ownedError) throw ownedError;
+
+      // Fetch cookbooks where the user is a collaborator
+      const { data: collaboratedCookbooksData, error: collabError } = await supabase
+        .from('cookbook_collaborators')
+        .select(`
+          cookbook_id,
+          cookbooks (
+            id,
+            name,
+            description,
+            user_id,
+            is_public
+          )
+        `)
+        .eq('user_id', userId)
+        .eq('status', 'accepted');
+      if (collabError) throw collabError;
+
+      const collaboratedCookbooks: Cookbook[] = (collaboratedCookbooksData || [])
+        .map((item: any) => ({
+          ...item.cookbooks,
+          is_owner: false,
+          is_collaborator: true,
+        }));
+
+      const allCookbooks: Cookbook[] = [
+        ...(ownedCookbooks || []).map(cb => ({ ...cb, is_owner: true, is_collaborator: false })),
+        ...collaboratedCookbooks,
+      ];
+
+      // Filter out duplicates if a user owns and is also a collaborator (shouldn't happen with current RLS but good practice)
+      const uniqueCookbooks = Array.from(new Map(allCookbooks.map(cb => [cb.id, cb])).values());
+
+      setCookbooks(uniqueCookbooks);
       // Automatically select the first cookbook if none is selected
-      if (!selectedCookbook && data && data.length > 0) {
-        setSelectedCookbook(data[0]);
+      if (!selectedCookbook && uniqueCookbooks.length > 0) {
+        setSelectedCookbook(uniqueCookbooks[0]);
       }
     } catch (error) {
       console.error('Load cookbooks error:', error);
@@ -246,6 +301,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         description: 'Failed to fetch your saved meal plans.',
         variant: 'destructive'
       });
+    }
+  }, []);
+
+  const loadCookbookInvitations = useCallback(async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('cookbook_collaborators')
+        .select(`
+          id,
+          cookbook_id,
+          status,
+          cookbooks(name),
+          invited_by_user:users!cookbook_collaborators_invited_by_user_id_fkey(username, email)
+        `)
+        .eq('user_id', userId)
+        .eq('status', 'pending');
+      
+      if (error) throw error;
+
+      const invitations: CookbookInvitation[] = (data || []).map((item: any) => ({
+        id: item.id,
+        cookbook_id: item.cookbook_id,
+        cookbook_name: item.cookbooks.name,
+        invited_by_user_id: item.invited_by_user.id, // Assuming ID is available, though not explicitly selected
+        invited_by_username: item.invited_by_user.username || item.invited_by_user.email.split('@')[0],
+        status: item.status,
+      }));
+      setCookbookInvitations(invitations);
+    } catch (error) {
+      console.error('Error loading cookbook invitations:', error);
     }
   }, []);
 
@@ -368,6 +453,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               loadCookbooks(newUserData.id);
               loadFriends(newUserData.id);
               loadMealPlans(newUserData.id); // Load meal plans on login
+              loadCookbookInvitations(newUserData.id); // Load invitations on login
               if (guestCookbooks.length > 0 || guestRecipes.length > 0) {
                 syncGuestDataToUser();
               }
@@ -382,6 +468,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           loadCookbooks(userData.id);
           loadFriends(userData.id);
           loadMealPlans(userData.id); // Load meal plans on login
+          loadCookbookInvitations(userData.id); // Load invitations on login
           // Sync guest data after user is set and their data is loaded
           if (guestCookbooks.length > 0 || guestRecipes.length > 0) {
             syncGuestDataToUser();
@@ -392,13 +479,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setCookbooks([]); // Clear Supabase cookbooks if logged out
         setFriends([]); // Clear Supabase friends if logged out
         setSavedMealPlans([]); // Clear saved meal plans if logged out
+        setCookbookInvitations([]); // Clear invitations if logged out
       }
     } catch (error) {
       console.error('Check user error:', error);
       // If there's an error checking user, assume logged out state
       setUser(null);
     }
-  }, [guestCookbooks, guestRecipes, syncGuestDataToUser, selectedCookbook, loadMealPlans]); // Added selectedCookbook to dependencies
+  }, [guestCookbooks, guestRecipes, syncGuestDataToUser, selectedCookbook, loadMealPlans, loadCookbookInvitations]); // Added selectedCookbook to dependencies
 
   useEffect(() => {
     checkUser();
@@ -459,6 +547,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSelectedCookbook(null);
     setFriends([]);
     setSavedMealPlans([]); // Clear saved meal plans on explicit sign out
+    setCookbookInvitations([]); // Clear invitations on explicit sign out
     setGuestCookbooks([]); // Clear guest data on explicit sign out
     setGuestRecipes([]);
     if (typeof window !== 'undefined') {
@@ -852,6 +941,177 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  const inviteCollaborator = async (cookbookId: string, collaboratorEmail: string) => {
+    if (!user) throw new Error('You must be logged in to invite collaborators.');
+
+    // 1. Verify current user owns the cookbook
+    const { data: cookbook, error: cookbookError } = await supabase
+      .from('cookbooks')
+      .select('id, user_id, name')
+      .eq('id', cookbookId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (cookbookError || !cookbook) {
+      throw new Error('Cookbook not found or you do not own it.');
+    }
+
+    // 2. Find the collaborator's user ID
+    const { data: collaboratorUser, error: collabUserError } = await supabase
+      .from('users')
+      .select('id, username, email')
+      .eq('email', collaboratorEmail)
+      .single();
+
+    if (collabUserError || !collaboratorUser) {
+      throw new Error('Collaborator user with this email not found.');
+    }
+
+    if (collaboratorUser.id === user.id) {
+      throw new Error('You cannot invite yourself to collaborate.');
+    }
+
+    // 3. Check if invitation or collaboration already exists
+    const { data: existingCollab, error: existingCollabError } = await supabase
+      .from('cookbook_collaborators')
+      .select('*')
+      .eq('cookbook_id', cookbookId)
+      .eq('user_id', collaboratorUser.id);
+
+    if (existingCollabError) throw existingCollabError;
+
+    if (existingCollab && existingCollab.length > 0) {
+      if (existingCollab[0].status === 'pending') {
+        throw new Error('Invitation already pending for this user.');
+      } else if (existingCollab[0].status === 'accepted') {
+        throw new Error('This user is already a collaborator on this cookbook.');
+      }
+    }
+
+    // 4. Insert the invitation
+    try {
+      const { error } = await supabase
+        .from('cookbook_collaborators')
+        .insert({
+          cookbook_id: cookbookId,
+          user_id: collaboratorUser.id,
+          invited_by_user_id: user.id,
+          status: 'pending',
+          role: 'editor', // Default role for now
+        });
+
+      if (error) throw error;
+      toast({
+        title: 'Invitation Sent!',
+        description: `Invitation sent to ${collaboratorUser.username || collaboratorUser.email} for "${cookbook.name}".`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['cookbookCollaborators', cookbookId] }); // Invalidate to refetch collaborators
+    } catch (error: any) {
+      console.error('Error inviting collaborator:', error);
+      toast({
+        title: 'Failed to Send Invitation',
+        description: error.message || 'An error occurred while sending the invitation.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const acceptCookbookInvitation = async (invitationId: string) => {
+    if (!user) throw new Error('You must be logged in to accept invitations.');
+    try {
+      const { error } = await supabase
+        .from('cookbook_collaborators')
+        .update({ status: 'accepted' })
+        .eq('id', invitationId)
+        .eq('user_id', user.id)
+        .eq('status', 'pending'); // Only accept pending invitations
+
+      if (error) throw error;
+      toast({
+        title: 'Invitation Accepted!',
+        description: 'You are now a collaborator on this cookbook.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['cookbookInvitations', user.id] });
+      queryClient.invalidateQueries({ queryKey: ['cookbooks', user.id] }); // Re-fetch cookbooks to show the new one
+    } catch (error: any) {
+      console.error('Error accepting invitation:', error);
+      toast({
+        title: 'Failed to Accept Invitation',
+        description: error.message || 'An error occurred while accepting the invitation.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const rejectCookbookInvitation = async (invitationId: string) => {
+    if (!user) throw new Error('You must be logged in to reject invitations.');
+    try {
+      const { error } = await supabase
+        .from('cookbook_collaborators')
+        .update({ status: 'rejected' }) // Or delete the entry
+        .eq('id', invitationId)
+        .eq('user_id', user.id)
+        .eq('status', 'pending');
+
+      if (error) throw error;
+      toast({
+        title: 'Invitation Rejected',
+        description: 'The cookbook invitation has been declined.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['cookbookInvitations', user.id] });
+    } catch (error: any) {
+      console.error('Error rejecting invitation:', error);
+      toast({
+        title: 'Failed to Reject Invitation',
+        description: error.message || 'An error occurred while rejecting the invitation.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
+  const removeCollaborator = async (cookbookId: string, collaboratorUserId: string) => {
+    if (!user) throw new Error('You must be logged in to remove collaborators.');
+
+    // Verify current user owns the cookbook
+    const { data: cookbook, error: cookbookError } = await supabase
+      .from('cookbooks')
+      .select('id, user_id')
+      .eq('id', cookbookId)
+      .eq('user_id', user.id)
+      .single();
+
+    if (cookbookError || !cookbook) {
+      throw new Error('Cookbook not found or you do not own it.');
+    }
+
+    try {
+      const { error } = await supabase
+        .from('cookbook_collaborators')
+        .delete()
+        .eq('cookbook_id', cookbookId)
+        .eq('user_id', collaboratorUserId);
+
+      if (error) throw error;
+      toast({
+        title: 'Collaborator Removed',
+        description: 'The collaborator has been removed from the cookbook.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['cookbookCollaborators', cookbookId] });
+      queryClient.invalidateQueries({ queryKey: ['cookbooks', collaboratorUserId] }); // Invalidate collaborator's cookbooks
+    } catch (error: any) {
+      console.error('Error removing collaborator:', error);
+      toast({
+        title: 'Failed to Remove Collaborator',
+        description: error.message || 'An error occurred while removing the collaborator.',
+        variant: 'destructive',
+      });
+      throw error;
+    }
+  };
+
   const addRecipeToCookbook = async (recipe: Recipe, cookbookId: string) => {
     if (!user) {
       // Guest mode: add to local storage
@@ -882,11 +1142,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     
     try {
+      // Check if user is owner or collaborator
+      const { data: cookbookAccess, error: accessError } = await supabase
+        .from('cookbooks')
+        .select('user_id')
+        .eq('id', cookbookId)
+        .single();
+
+      if (accessError || !cookbookAccess) {
+        throw new Error('Cookbook not found or inaccessible.');
+      }
+
+      const isOwner = cookbookAccess.user_id === user.id;
+
+      const { data: collaboratorStatus, error: collabStatusError } = await supabase
+        .from('cookbook_collaborators')
+        .select('status')
+        .eq('cookbook_id', cookbookId)
+        .eq('user_id', user.id)
+        .single();
+
+      const isAcceptedCollaborator = collaboratorStatus?.status === 'accepted';
+
+      if (!isOwner && !isAcceptedCollaborator) {
+        throw new Error('You do not have permission to add recipes to this cookbook.');
+      }
+
       // Check for duplicate in Supabase
       const { data: existingRecipes, error: fetchError } = await supabase
         .from('recipes')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('user_id', isOwner ? user.id : cookbookAccess.user_id) // If collaborator, check against owner's recipes
         .eq('cookbook_id', cookbookId)
         .eq('title', recipe.title)
         .eq('url', recipe.url);
@@ -905,7 +1191,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data, error } = await supabase
         .from('recipes')
         .insert({
-          user_id: user.id,
+          user_id: isOwner ? user.id : cookbookAccess.user_id, // Recipes are owned by the cookbook owner
           cookbook_id: cookbookId,
           title: recipe.title,
           ingredients: recipe.ingredients,
@@ -926,6 +1212,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         title: 'Recipe Added!',
         description: `${recipe.title} has been added to your cookbook.`,
       });
+      queryClient.invalidateQueries({ queryKey: ['recipes', cookbookId] }); // Invalidate recipes for this cookbook
     } catch (error) {
       console.error('Error adding recipe to cookbook:', error);
       throw error;
@@ -1027,17 +1314,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         friends,
         guestCookbooks,
         guestRecipes,
-        savedMealPlans, // Added
+        savedMealPlans,
+        cookbookInvitations, // Added
         setGuestRecipes,
         setSelectedCookbook,
         signIn,
         signUp,
         signOut,
         createCookbook,
-        updateUserProfile, // Added
-        updateCookbookPrivacy, // Added
-        deleteCookbook, // Added
-        copyCookbook, // Added
+        updateUserProfile,
+        updateCookbookPrivacy,
+        deleteCookbook,
+        copyCookbook,
         addFriend,
         removeFriend,
         acceptFriendRequest,
@@ -1045,9 +1333,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         addRecipeToCookbook,
         sendPasswordResetEmail,
         syncGuestDataToUser,
-        saveMealPlan, // Added
-        loadMealPlans, // Added
-        deleteMealPlan, // Added
+        saveMealPlan,
+        loadMealPlans,
+        deleteMealPlan,
+        inviteCollaborator, // Added
+        acceptCookbookInvitation, // Added
+        rejectCookbookInvitation, // Added
+        removeCollaborator, // Added
       }}
     >
       {children}
