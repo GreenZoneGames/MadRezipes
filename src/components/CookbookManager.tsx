@@ -11,6 +11,17 @@ import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/lib/supabase';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import UserAuth from './UserAuth'; // Import UserAuth for login prompt
+import RecipeCard from './RecipeCard'; // Import RecipeCard to display details
+
+interface CategorizedIngredients {
+  proteins: string[];
+  vegetables: string[];
+  fruits: string[];
+  grains: string[];
+  dairy: string[];
+  spices: string[];
+  other: string[];
+}
 
 interface Recipe {
   id: string;
@@ -23,7 +34,7 @@ interface Recipe {
   servings?: number;
   meal_type?: string; // Matches DB column name
   cookbook_id?: string; // Matches DB column name
-  categorized_ingredients?: any; // Matches DB column name
+  categorized_ingredients?: CategorizedIngredients; // Matches DB column name
 }
 
 interface CookbookManagerProps {
@@ -37,6 +48,8 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
   const [newCookbookDescription, setNewCookbookDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false); // State for auth dialog
+  const [showRecipeDetailsDialog, setShowRecipeDetailsDialog] = useState(false); // State for recipe details dialog
+  const [selectedRecipeForDetails, setSelectedRecipeForDetails] = useState<Recipe | null>(null); // State for selected recipe
   const queryClient = useQueryClient();
 
   const currentCookbooks = user ? cookbooks : guestCookbooks;
@@ -147,6 +160,11 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
     // syncGuestDataToUser is called automatically by AppContext after successful login
   };
 
+  const handleViewRecipeDetails = (recipe: Recipe) => {
+    setSelectedRecipeForDetails(recipe);
+    setShowRecipeDetailsDialog(true);
+  };
+
   const recipesToDisplay = user ? recipesInCookbook : guestRecipesForSelectedCookbook;
   const isLoadingCurrentRecipes = user ? isLoadingRecipes : false; // Only show loading for DB fetch
 
@@ -247,12 +265,19 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
                   </div>
                 ) : recipesToDisplay && recipesToDisplay.length > 0 ? (
                   recipesToDisplay.map(recipe => (
-                    <div key={recipe.id} className="flex items-center justify-between p-2 border rounded-lg bg-background/30">
+                    <div 
+                      key={recipe.id} 
+                      className="flex items-center justify-between p-2 border rounded-lg bg-background/30 cursor-pointer hover:bg-background/50 transition-colors"
+                      onClick={() => handleViewRecipeDetails(recipe)} // Click to view details
+                    >
                       <span className="text-sm font-medium truncate">{recipe.title}</span>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleRemoveRecipe(recipe.id)}
+                        onClick={(e) => { // Prevent dialog from opening when deleting
+                          e.stopPropagation(); 
+                          handleRemoveRecipe(recipe.id);
+                        }}
                         className="text-red-500 hover:text-red-700"
                       >
                         <Trash2 className="h-3 w-3" />
@@ -270,6 +295,22 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved }) =>
         </div>
       </CardContent>
       <UserAuth open={showAuthDialog} onOpenChange={setShowAuthDialog} onAuthSuccess={handleAuthSuccess} />
+
+      {/* Recipe Details Dialog */}
+      <Dialog open={showRecipeDetailsDialog} onOpenChange={setShowRecipeDetailsDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{selectedRecipeForDetails?.title}</DialogTitle>
+          </DialogHeader>
+          {selectedRecipeForDetails && (
+            <RecipeCard 
+              recipe={selectedRecipeForDetails} 
+              // Pass onAddToShoppingList if needed, or remove if not applicable in this context
+              // onAddToShoppingList={onAddToShoppingList} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
