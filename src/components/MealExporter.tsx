@@ -235,11 +235,11 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
           </Button>
           
           <div className="text-sm text-muted-foreground space-y-1">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />
               <span>Full month calendar with meal titles and icons</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <Coffee className="h-4 w-4 text-orange-500" />
               <span>☀️ Breakfast</span>
               <Utensils className="h-4 w-4 text-blue-500" />
@@ -247,11 +247,11 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan }) => {
               <Moon className="h-4 w-4 text-purple-500" />
               <span>🌙 Dinner</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <ShoppingCart className="h-4 w-4 text-primary" />
               <span>Combined shopping list for all ingredients</span>
             </div>
-            <p className="text-xs pt-2">
+            <p className="text-xs pt-2 text-center">
               {mealPlan.length > 0 ? `${mealPlan.length} planned meals` : 'Auto-generates full month plan'} • {getAllIngredients().length} unique ingredients
             </p>
           </div>
