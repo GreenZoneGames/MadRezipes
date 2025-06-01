@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, BookOpen, Plus, Share2, Printer, Copy, Loader2, Twitter, Facebook, Pinterest } from 'lucide-react';
+import { ExternalLink, BookOpen, Plus, Share2, Printer, Copy, Loader2, Twitter, Facebook } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import QuickShareRecipe from '../QuickShareRecipe';
@@ -147,11 +147,7 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
     toast({ title: 'Sharing on Facebook', description: 'Opening Facebook to share your recipe.' });
   };
 
-  const handleSharePinterest = () => {
-    const url = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(recipe.url)}&media=${encodeURIComponent(recipe.image || '')}&description=${encodeURIComponent(recipe.title)}`;
-    window.open(url, '_blank', 'width=800,height=600');
-    toast({ title: 'Sharing on Pinterest', description: 'Opening Pinterest to share your recipe.' });
-  };
+  // Removed handleSharePinterest as the icon is not available
 
   const canCopyCookbook = user && recipe.is_public && recipe.cookbook_id && recipe.cookbook_owner_id !== user.id;
 
@@ -204,9 +200,7 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
             <DropdownMenuItem onClick={handleShareFacebook}>
               <Facebook className="h-4 w-4 mr-2" /> Share on Facebook
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleSharePinterest}>
-              <Pinterest className="h-4 w-4 mr-2" /> Share on Pinterest
-            </DropdownMenuItem>
+            {/* Removed Pinterest option due to unavailable icon */}
             <QuickShareRecipe recipe={recipe}>
               <DropdownMenuItem onSelect={(e) => e.preventDefault()}> {/* Prevent dropdown from closing immediately */}
                 <Share2 className="h-4 w-4 mr-2" /> Share In-App
