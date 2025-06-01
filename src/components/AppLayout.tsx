@@ -195,8 +195,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           <div className={`space-y-6 ${
             isMobile ? 'order-2' : ''
           }`}>
-            {/* MealPlanner is now rendered via dialog */}
-            {/* Removed MealExporter from here */}
+            <CookbookManager onRecipeRemoved={onRecipeRemoved} setActiveTab={setActiveTab} />
           </div>
         </div>
       </main>

@@ -8,7 +8,6 @@ import { toast } from '@/components/ui/use-toast';
 import MessageInbox from './MessageInbox';
 import UserAuth from './UserAuth';
 import UserProfileDialog from './UserProfileDialog';
-import MyCookbooksDialog from './MyCookbooksDialog';
 import FriendsDialog from './FriendsDialog';
 import ShoppingListDialog from './ShoppingListDialog';
 import MealPlannerDialog from './MealPlannerDialog';
@@ -48,7 +47,6 @@ const TopBar: React.FC<TopBarProps> = ({
   const [showAuth, setShowAuth] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showCookbooksDialog, setShowCookbooksDialog] = useState(false);
   const [showFriendsDialog, setShowFriendsDialog] = useState(false);
   const [showShoppingListDialog, setShowShoppingListDialog] = useState(false);
   const [showMealPlannerDialog, setShowMealPlannerDialog] = useState(false);
@@ -82,10 +80,6 @@ const TopBar: React.FC<TopBarProps> = ({
     }
   };
 
-  const handleCookbooksClick = () => {
-    setShowCookbooksDialog(true);
-  };
-
   const handleFriendsClick = () => {
     setShowFriendsDialog(true);
   };
@@ -113,17 +107,6 @@ const TopBar: React.FC<TopBarProps> = ({
         {!isMobile && <span className="ml-1">Messages</span>}
       </Button>
       
-      {/* My Cookbooks Button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleCookbooksClick}
-        className={cn(iconButtonClasses)}
-      >
-        <BookOpen className="h-4 w-4" />
-        {!isMobile && <span className="ml-1">Cookbooks</span>}
-      </Button>
-
       {/* Friends Button */}
       <Button
         variant="ghost"
@@ -188,12 +171,6 @@ const TopBar: React.FC<TopBarProps> = ({
       <UserAuth open={showAuth} onOpenChange={setShowAuth} />
       <MessageInbox open={showMessages} onOpenChange={setShowMessages} />
       <UserProfileDialog open={showProfile} onOpenChange={setShowProfile} />
-      <MyCookbooksDialog 
-        open={showCookbooksDialog} 
-        onOpenChange={setShowCookbooksDialog} 
-        onRecipeRemoved={onRecipeRemoved}
-        setActiveTab={setActiveTab}
-      />
       <FriendsDialog 
         open={showFriendsDialog} 
         onOpenChange={setShowFriendsDialog} 
