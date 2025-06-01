@@ -139,11 +139,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
             </div>
             
             <div className="flex items-center gap-4">
-              <div className={`text-white/90 font-medium drop-shadow-md ${
-                isMobile ? 'text-xs' : 'text-sm'
-              }`}>
-                {localRecipes.length} recipes • {localMealPlan.length} meals
-              </div>
+              {/* Removed recipe and meal count display */}
               <TopBar 
                 onRecipeRemoved={onRecipeRemoved} 
                 setActiveTab={setActiveTab} 
@@ -203,6 +199,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                       recipe={recipe}
                       onAddToShoppingList={addToShoppingList}
                       onRecipeAdded={handleRecipeAdded}
+                      showFullDetails={false} // Ensure condensed view for collection
                     />
                   ))}
                 </div>

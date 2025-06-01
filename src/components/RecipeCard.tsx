@@ -282,13 +282,13 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
 
   return (
     <Card className="hover-lift bg-card/50 backdrop-blur-sm border-border/50">
-      <CardHeader>
+      <CardHeader className="pb-3"> {/* Adjusted padding */}
         <div className="flex items-start gap-3">
           {recipe.image && (
             <img 
               src={recipe.image} 
               alt={recipe.title}
-              className="w-20 h-20 object-cover rounded-lg flex-shrink-0 md:w-24 md:h-24 lg:w-32 lg:h-32 max-w-full h-auto"
+              className="w-24 h-24 object-cover rounded-lg flex-shrink-0" // Increased size for better visibility
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
               }}
@@ -312,6 +312,12 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
                   {recipe.servings} servings
                 </Badge>
               )}
+              {recipe.meal_type && (
+                <Badge variant="secondary" className="text-xs">
+                  <ChefHat className="h-3 w-3 mr-1" />
+                  {recipe.meal_type}
+                </Badge>
+              )}
               <Badge variant="outline" className="text-xs">
                 {recipe.ingredients.length} ingredients
               </Badge>
@@ -319,7 +325,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-3"> {/* Adjusted padding */}
         {recipe.categorized_ingredients && Object.keys(recipe.categorized_ingredients).length > 0 && (
           <div className="mb-4">
             <h4 className="font-semibold mb-2 text-sm">📋 Ingredients by Category:</h4>
