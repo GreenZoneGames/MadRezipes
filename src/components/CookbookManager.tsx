@@ -594,7 +594,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
     }
   };
 
-  const isLoadingCollaborators = useQuery<CookbookCollaborator[]>({
+  const { data: collaborators, isLoading: isLoadingCollaborators } = useQuery<CookbookCollaborator[]>({
     queryKey: ['cookbookCollaborators', cookbookToManageCollaborators?.id],
     queryFn: async () => {
       if (!cookbookToManageCollaborators) return [];
@@ -612,7 +612,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
       return data as CookbookCollaborator[];
     },
     enabled: !!cookbookToManageCollaborators,
-  }).isLoading;
+  });
 
   const isLoadingCurrentRecipes = user && currentSelectedCookbook?.user_id !== 'guest' ? isLoadingDbRecipes : false;
 
