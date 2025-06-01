@@ -44,7 +44,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import arrayMove from 'array-move'; // Corrected import
+import { arrayMove } from 'array-move'; // Corrected import to named export
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -585,6 +585,26 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
     }
   };
 
+  const isLoadingCollaborators = useQuery<CookbookCollaborator[]>({
+    queryKey: ['cookbookCollaborators', cookbookToManageCollaborators?.id],
+    queryFn: async () => {
+      if (!cookbookToManageCollaborators) return [];
+      const { data, error } = await supabase
+        .from('cookbook_collaborators')
+        .select(`
+          id,
+          user_id,
+          role,
+          status,
+          users(username, email)
+        `)
+        .eq('cookbook_id', cookbookToManageCollaborators.id);
+      if (error) throw error;
+      return data as CookbookCollaborator[];
+    },
+    enabled: !!cookbookToManageCollaborators,
+  }).isLoading;
+
   const isLoadingCurrentRecipes = user && currentSelectedCookbook?.user_id !== 'guest' ? isLoadingDbRecipes : false;
 
   const getActiveRecipe = (activeId: string | null) => {
@@ -838,7 +858,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                       {currentSelectedCookbook.is_public ? (
                         <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> Public</span>
                       ) : (
-                        <span className="flex items-center gap-1"><Lock className="h-3 w-4" /> Private</span>
+                        <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private</span>
                       )}
                     </Badge>
                   )}
@@ -1030,7 +1050,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
               <Textarea
                 placeholder="Description (optional)"
                 value={editingCookbookDescription}
-                onChange={(e) => setEditingCookbookDescription(e.target.value)}
+                onChange={(e) => setNewCookbookDescription(e.target.value)}
                 disabled={isUpdatingCookbook}
                 rows={3}
               />
