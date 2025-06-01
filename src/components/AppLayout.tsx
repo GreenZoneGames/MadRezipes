@@ -195,7 +195,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           <div className={`space-y-6 ${
             isMobile ? 'order-2' : ''
           }`}>
-            {/* The right column is now empty as MealExporter is moved */}
+            {/* MealPlanner is now rendered via dialog */}
+            <MealExporter recipes={localRecipes} mealPlan={localMealPlan} selectedMonth={selectedMonth} />
           </div>
         </div>
       </main>
