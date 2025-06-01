@@ -592,6 +592,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         is_public: isPublic, // Include is_public for guest cookbooks
       };
       setGuestCookbooks(prev => [...prev, newGuestCookbook]);
+      setSelectedCookbook(newGuestCookbook); // Set as selected immediately
       return newGuestCookbook;
     }
     
@@ -625,6 +626,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       
       if (error) throw error;
       setCookbooks(prev => [...prev, data]);
+      setSelectedCookbook(data); // Set as selected immediately
+      queryClient.invalidateQueries({ queryKey: ['cookbooks', user.id] }); // Re-fetch to ensure consistency
       return data;
     } catch (error) {
       console.error('Create cookbook error:', error);
