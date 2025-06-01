@@ -12,19 +12,7 @@ import CookbookManager from './CookbookManager';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-
-interface Recipe {
-  id: string;
-  title: string;
-  ingredients: string[];
-  instructions: string[];
-  url: string;
-  image?: string;
-  cook_time?: string; // Changed to snake_case
-  servings?: number;
-  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
-  cookbook_id?: string; // Changed to snake_case
-}
+import { Recipe } from '@/types/recipe'; // Import Recipe from central types file
 
 const AppLayout: React.FC = () => {
   const { sidebarOpen, toggleSidebar } = useAppContext();
