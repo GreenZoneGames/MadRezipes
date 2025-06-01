@@ -38,7 +38,7 @@ interface RecipeCardProps {
   onAddToShoppingList?: (ingredients: string[]) => void;
   onRecipeAdded?: (recipe: Recipe) => void;
   showFullDetails?: boolean;
-  onRemove?: (recipeId: string, cookbookId?: string) => void; // New prop
+  onRemove?: (recipeId: string, cookbookId?: string) => void;
 }
 
 const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, onRecipeAdded, showFullDetails = false, onRemove }) => {
@@ -68,7 +68,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
           recipe={recipe}
           onAddToShoppingList={onAddToShoppingList}
           onRecipeAdded={onRecipeAdded}
-          onRemove={onRemove} {/* Pass onRemove to RecipeActions */}
+          onRemove={onRemove}
         />
 
         {/* Recipe Comments Section */}
