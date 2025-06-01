@@ -29,6 +29,23 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { exportCookbookRecipesToPDF } from '@/utils/cookbook-pdf-export';
 
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { arrayMove } from 'array-move';
+
 interface CategorizedIngredients {
   proteins: string[];
   vegetables: string[];
@@ -51,6 +68,7 @@ interface Recipe {
   meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string;
   cookbook_id?: string;
   categorized_ingredients?: CategorizedIngredients;
+  position?: number; // Added position for ordering
 }
 
 interface Cookbook {
@@ -79,8 +97,53 @@ interface CookbookManagerProps {
   setActiveTab: (tab: string) => void;
 }
 
+// Sortable Item Component
+const SortableRecipeItem: React.FC<{ recipe: Recipe; onClick: (recipe: Recipe) => void; onRemove: (id: string) => void; canRemove: boolean }> = ({ recipe, onClick, onRemove, canRemove }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: recipe.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 0,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      className="flex items-center justify-between p-2 border rounded-lg bg-background/30 cursor-grab hover:bg-background/50 transition-colors"
+      onClick={() => onClick(recipe)}
+    >
+      <span className="text-sm font-medium truncate" {...listeners}>{recipe.title}</span>
+      {canRemove && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation(); 
+            onRemove(recipe.id);
+          }}
+          className="text-red-500 hover:text-red-700"
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      )}
+    </div>
+  );
+};
+
+
 const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setActiveTab }) => {
-  const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy, deleteCookbook, copyCookbook, cookbookInvitations, acceptCookbookInvitation, rejectCookbookInvitation, inviteCollaborator, removeCollaborator } = useAppContext();
+  const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy, deleteCookbook, copyCookbook, cookbookInvitations, acceptCookbookInvitation, rejectCookbookInvitation, inviteCollaborator, removeCollaborator, updateRecipeOrder } = useAppContext();
   const queryClient = useQueryClient();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -113,27 +176,12 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   const [showManageCollaboratorsDialog, setShowManageCollaboratorsDialog] = useState(false);
   const [cookbookToManageCollaborators, setCookbookToManageCollaborators] = useState<Cookbook | null>(null);
 
-  // Fetch collaborators for the selected cookbook
-  const { data: collaborators, isLoading: isLoadingCollaborators } = useQuery<CookbookCollaborator[]>({
-    queryKey: ['cookbookCollaborators', cookbookToManageCollaborators?.id],
-    queryFn: async () => {
-      if (!user || !cookbookToManageCollaborators || cookbookToManageCollaborators.user_id === 'guest') return [];
-      const { data, error } = await supabase
-        .from('cookbook_collaborators')
-        .select(`
-          id,
-          user_id,
-          role,
-          status,
-          users(username, email)
-        `)
-        .eq('cookbook_id', cookbookToManageCollaborators.id);
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!user && !!cookbookToManageCollaborators && cookbookToManageCollaborators.user_id !== 'guest',
-  });
+  // DND state
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor),
+  );
 
   const uniqueCookbooks = Array.from(new Map(
     (user ? cookbooks : guestCookbooks).map(cb => [cb.id, cb])
@@ -141,10 +189,10 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
 
   const currentSelectedCookbook = selectedCookbook || (uniqueCookbooks.length > 0 ? uniqueCookbooks[0] : null);
 
-  const { data: recipesInCookbook, isLoading: isLoadingRecipes } = useQuery<Recipe[]>({
-    queryKey: ['recipes', currentSelectedCookbook?.id], // Key only depends on cookbook ID
+  const { data: dbRecipes, isLoading: isLoadingDbRecipes } = useQuery<Recipe[]>({
+    queryKey: ['recipes', user?.id, currentSelectedCookbook?.id], // Key only depends on cookbook ID
     queryFn: async () => {
-      if (!currentSelectedCookbook || currentSelectedCookbook.user_id === 'guest') return [];
+      if (!user || !currentSelectedCookbook || currentSelectedCookbook.user_id === 'guest') return [];
       
       // If the user is the owner, fetch their recipes for this cookbook
       // If the user is a collaborator, fetch recipes owned by the cookbook owner for this cookbook
@@ -154,13 +202,20 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
         .from('recipes')
         .select('*')
         .eq('user_id', ownerId) // Fetch recipes owned by the cookbook owner
-        .eq('cookbook_id', currentSelectedCookbook.id);
+        .eq('cookbook_id', currentSelectedCookbook.id)
+        .order('position', { ascending: true }); // Order by position
       
       if (error) throw error;
       return data || [];
     },
     enabled: !!currentSelectedCookbook && currentSelectedCookbook.user_id !== 'guest',
   });
+
+  const guestRecipesForSelectedCookbook = currentSelectedCookbook && currentSelectedCookbook.user_id === 'guest'
+    ? guestRecipes.filter(recipe => recipe.cookbook_id === currentSelectedCookbook.id).sort((a, b) => (a.position || 0) - (b.position || 0))
+    : [];
+
+  const [recipesToDisplay, setRecipesToDisplay] = useState<Recipe[]>([]);
 
   // Effect 1: Populate form data when dialog opens or user data changes
   useEffect(() => {
@@ -170,6 +225,18 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
       setEditingCookbookIsPublic(editingCookbook.is_public);
     }
   }, [showEditCookbookDialog, editingCookbook]);
+
+  // Effect 2: Sync recipes from query/guest state to local state for DND
+  useEffect(() => {
+    if (user && currentSelectedCookbook?.user_id !== 'guest') {
+      setRecipesToDisplay(dbRecipes || []);
+    } else if (currentSelectedCookbook?.user_id === 'guest') {
+      setRecipesToDisplay(guestRecipesForSelectedCookbook);
+    } else {
+      setRecipesToDisplay([]);
+    }
+  }, [dbRecipes, guestRecipesForSelectedCookbook, user, currentSelectedCookbook]);
+
 
   const handleCreateCookbook = async () => {
     if (!newCookbookName.trim()) {
@@ -247,7 +314,9 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   };
 
   const handleRemoveRecipe = async (recipeId: string) => {
-    if (!user) {
+    if (!currentSelectedCookbook) return;
+
+    if (currentSelectedCookbook.user_id === 'guest') {
       setGuestRecipes(prev => prev.filter(recipe => recipe.id !== recipeId));
       toast({
         title: 'Recipe Removed',
@@ -259,12 +328,12 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
     
     try {
       // Check if user is owner or collaborator
-      const isOwner = currentSelectedCookbook?.user_id === user.id;
+      const isOwner = currentSelectedCookbook?.user_id === user?.id;
       const { data: collaboratorStatus } = await supabase
         .from('cookbook_collaborators')
         .select('status')
         .eq('cookbook_id', currentSelectedCookbook?.id)
-        .eq('user_id', user.id)
+        .eq('user_id', user?.id)
         .single();
       const isAcceptedCollaborator = collaboratorStatus?.status === 'accepted';
 
@@ -456,11 +525,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
       return;
     }
 
-    const recipesToExport = user && currentSelectedCookbook.user_id !== 'guest' 
-      ? recipesInCookbook 
-      : guestRecipesForSelectedCookbook;
-
-    if (!recipesToExport || recipesToExport.length === 0) {
+    if (!recipesToDisplay || recipesToDisplay.length === 0) {
       toast({
         title: 'No Recipes to Export',
         description: 'This cookbook does not contain any recipes to export.',
@@ -470,7 +535,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
     }
 
     try {
-      await exportCookbookRecipesToPDF(recipesToExport, currentSelectedCookbook.name);
+      await exportCookbookRecipesToPDF(recipesToDisplay, currentSelectedCookbook.name);
       toast({
         title: 'Recipes Exported!',
         description: `"${currentSelectedCookbook.name}" recipes downloaded as PDF.`
@@ -520,19 +585,54 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
     }
   };
 
-  const guestRecipesForSelectedCookbook = currentSelectedCookbook && currentSelectedCookbook.user_id === 'guest'
-    ? guestRecipes.filter(recipe => recipe.cookbook_id === currentSelectedCookbook.id)
-    : [];
+  const isLoadingCurrentRecipes = user && currentSelectedCookbook?.user_id !== 'guest' ? isLoadingDbRecipes : false;
 
-  const recipesToDisplay = user && currentSelectedCookbook?.user_id !== 'guest' ? recipesInCookbook : guestRecipesForSelectedCookbook;
-  const isLoadingCurrentRecipes = user && currentSelectedCookbook?.user_id !== 'guest' ? isLoadingRecipes : false;
+  const getActiveRecipe = (activeId: string | null) => {
+    return recipesToDisplay.find((recipe) => recipe.id === activeId);
+  };
 
+  const handleDragEnd = async (event: any) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      setRecipesToDisplay((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        
+        // Update positions in the local state immediately
+        const updatedOrderWithPositions = newOrder.map((recipe, index) => ({
+          ...recipe,
+          position: index,
+        }));
+        
+        // Persist the new order to Supabase
+        if (currentSelectedCookbook) {
+          const orderedRecipeIds = updatedOrderWithPositions.map(r => r.id);
+          updateRecipeOrder(currentSelectedCookbook.id, orderedRecipeIds);
+        }
+        
+        return updatedOrderWithPositions;
+      });
+    }
+    setActiveId(null);
+  };
+
+  const handleDragStart = (event: any) => {
+    setActiveId(event.active.id);
+  };
+
+  const handleDragCancel = () => {
+    setActiveId(null);
+  };
+
+  const canAddRemoveRecipes = isOwnerOfSelectedCookbook || isCollaboratorOnSelectedCookbook; // Owner or collaborator can add/remove recipes
   const isOwnerOfSelectedCookbook = user && currentSelectedCookbook?.user_id === user.id;
   const isCollaboratorOnSelectedCookbook = user && currentSelectedCookbook?.is_collaborator;
   const canEditCookbook = isOwnerOfSelectedCookbook; // Only owner can edit cookbook details
   const canDeleteCookbook = isOwnerOfSelectedCookbook; // Only owner can delete cookbook
   const canManageCollaborators = isOwnerOfSelectedCookbook; // Only owner can manage collaborators
-  const canAddRemoveRecipes = isOwnerOfSelectedCookbook || isCollaboratorOnSelectedCookbook; // Owner or collaborator can add/remove recipes
+  const canReorderRecipes = isOwnerOfSelectedCookbook || isCollaboratorOnSelectedCookbook; // Owner or collaborator can reorder
 
   return (
     <Card className="hover-lift bg-card/50 backdrop-blur-sm border-border/50">
@@ -750,11 +850,6 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                   )}
                 </h4>
                 <div className="flex items-center gap-2">
-                  {currentSelectedCookbook && (
-                    <Badge variant="secondary">
-                      {recipesToDisplay?.length || 0} recipes
-                    </Badge>
-                  )}
                   {canManageCollaborators && currentSelectedCookbook && (
                     <Button variant="ghost" size="sm" onClick={() => handleManageCollaborators(currentSelectedCookbook)}>
                       <Users className="h-4 w-4" />
@@ -862,28 +957,37 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                     Loading recipes...
                   </div>
                 ) : recipesToDisplay && recipesToDisplay.length > 0 ? (
-                  recipesToDisplay.map(recipe => (
-                    <div 
-                      key={recipe.id} 
-                      className="flex items-center justify-between p-2 border rounded-lg bg-background/30 cursor-pointer hover:bg-background/50 transition-colors"
-                      onClick={() => handleViewRecipeDetails(recipe)}
+                  <DndContext 
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                    onDragCancel={handleDragCancel}
+                  >
+                    <SortableContext 
+                      items={recipesToDisplay.map(r => r.id)} 
+                      strategy={verticalListSortingStrategy}
                     >
-                      <span className="text-sm font-medium truncate">{recipe.title}</span>
-                      {canAddRemoveRecipes && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation(); 
-                            handleRemoveRecipe(recipe.id);
-                          }}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  ))
+                      {recipesToDisplay.map(recipe => (
+                        <SortableRecipeItem 
+                          key={recipe.id} 
+                          recipe={recipe} 
+                          onClick={handleViewRecipeDetails}
+                          onRemove={handleRemoveRecipe}
+                          canRemove={canAddRemoveRecipes}
+                        />
+                      ))}
+                    </SortableContext>
+                    <DragOverlay>
+                      {activeId ? (
+                        <div className="p-2 border rounded-lg bg-background/80 shadow-lg">
+                          <span className="text-sm font-medium truncate">
+                            {getActiveRecipe(activeId)?.title}
+                          </span>
+                        </div>
+                      ) : null}
+                    </DragOverlay>
+                  </DndContext>
                 ) : (
                   <p className="text-sm text-muted-foreground text-center py-4">
                     No recipes in this cookbook yet. Add some!

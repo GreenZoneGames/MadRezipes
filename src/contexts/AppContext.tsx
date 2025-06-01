@@ -63,6 +63,7 @@ interface Recipe {
   servings?: number;
   meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
   cookbook_id?: string; // Changed to snake_case
+  position?: number; // Added position for ordering
 }
 
 export interface MealPlanEntry { // Renamed to avoid conflict with MealPlan interface in MealPlanner
@@ -107,6 +108,7 @@ interface AppContextType {
   acceptFriendRequest: (requestId: string, friendUserId: string) => Promise<void>; // New function
   rejectFriendRequest: (requestId: string) => Promise<void>; // New function
   addRecipeToCookbook: (recipe: Recipe, cookbookId: string) => Promise<void>;
+  updateRecipeOrder: (cookbookId: string, orderedRecipeIds: string[]) => Promise<void>; // New function
   sendPasswordResetEmail: (email: string) => Promise<void>;
   syncGuestDataToUser: () => Promise<void>; // New function to sync guest data
   saveMealPlan: (name: string, month: string, year: number, planData: MealPlanEntry[]) => Promise<void>; // New
@@ -144,6 +146,7 @@ const defaultAppContext: AppContextType = {
   acceptFriendRequest: async () => {}, // Dummy function
   rejectFriendRequest: async () => {}, // Dummy function
   addRecipeToCookbook: async () => {},
+  updateRecipeOrder: async () => {}, // Dummy
   sendPasswordResetEmail: async () => {},
   syncGuestDataToUser: async () => {},
   saveMealPlan: async () => {}, // Dummy
@@ -365,6 +368,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       for (const guestRecipe of guestRecipes) {
         const newCookbookId = guestRecipe.cookbook_id ? cookbookIdMap[guestRecipe.cookbook_id] : null;
         
+        // Get max position for the new cookbook to assign a sequential position
+        const { data: maxPositionData, error: maxPosError } = await supabase
+          .from('recipes')
+          .select('position')
+          .eq('cookbook_id', newCookbookId)
+          .order('position', { ascending: false })
+          .limit(1)
+          .single();
+        
+        const newPosition = (maxPositionData?.position || -1) + 1;
+
         const { error: recipeError } = await supabase
           .from('recipes')
           .insert({
@@ -379,6 +393,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             servings: guestRecipe.servings,
             meal_type: guestRecipe.meal_type,
             categorized_ingredients: guestRecipe.categorized_ingredients,
+            position: newPosition, // Assign position
           });
         
         if (recipeError) {
@@ -725,7 +740,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const { data: sourceRecipes, error: sourceRecipesError } = await supabase
         .from('recipes')
         .select('*')
-        .eq('cookbook_id', cookbookId);
+        .eq('cookbook_id', cookbookId)
+        .order('position', { ascending: true }); // Order by position for copying
 
       if (sourceRecipesError) {
         throw sourceRecipesError;
@@ -770,9 +786,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         throw newCookbookError;
       }
 
-      // 4. Copy recipes to the new cookbook
+      // 4. Copy recipes to the new cookbook, preserving order if possible
       if (sourceRecipes && sourceRecipes.length > 0) {
-        const recipesToInsert = sourceRecipes.map(recipe => ({
+        const recipesToInsert = sourceRecipes.map((recipe, index) => ({
           user_id: user.id,
           cookbook_id: newCookbook.id,
           title: recipe.title,
@@ -784,6 +800,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           servings: recipe.servings,
           meal_type: recipe.meal_type,
           categorized_ingredients: recipe.categorized_ingredients,
+          position: index, // Assign new sequential position based on source order
         }));
 
         const { error: insertRecipesError } = await supabase
@@ -1132,6 +1149,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         ...recipe,
         id: recipe.id || uuidv4(), // Ensure recipe has an ID
         cookbook_id: cookbookId,
+        position: guestRecipes.filter(r => r.cookbook_id === cookbookId).length, // Assign position for guest recipes
       };
       setGuestRecipes(prev => [...prev, newGuestRecipe]);
       toast({
@@ -1188,6 +1206,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
 
+      // Get max position for the target cookbook
+      const { data: maxPositionData, error: maxPosError } = await supabase
+        .from('recipes')
+        .select('position')
+        .eq('cookbook_id', cookbookId)
+        .order('position', { ascending: false })
+        .limit(1)
+        .single();
+      
+      const newPosition = (maxPositionData?.position || -1) + 1;
+
       const { data, error } = await supabase
         .from('recipes')
         .insert({
@@ -1202,6 +1231,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           servings: recipe.servings,
           meal_type: recipe.meal_type,
           categorized_ingredients: recipe.categorized_ingredients,
+          position: newPosition, // Assign position
         })
         .select()
         .single();
@@ -1215,6 +1245,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       queryClient.invalidateQueries({ queryKey: ['recipes', cookbookId] }); // Invalidate recipes for this cookbook
     } catch (error) {
       console.error('Error adding recipe to cookbook:', error);
+      throw error;
+    }
+  };
+
+  const updateRecipeOrder = async (cookbookId: string, orderedRecipeIds: string[]) => {
+    if (!user) {
+      // Guest mode: update local storage
+      setGuestRecipes(prev => {
+        const updatedRecipes = [...prev];
+        const cookbookRecipes = updatedRecipes.filter(r => r.cookbook_id === cookbookId);
+        const otherRecipes = updatedRecipes.filter(r => r.cookbook_id !== cookbookId);
+
+        const reorderedCookbookRecipes = orderedRecipeIds.map((id, index) => {
+          const recipe = cookbookRecipes.find(r => r.id === id);
+          return recipe ? { ...recipe, position: index } : null;
+        }).filter(Boolean) as Recipe[];
+
+        return [...otherRecipes, ...reorderedCookbookRecipes];
+      });
+      return;
+    }
+
+    try {
+      const updates = orderedRecipeIds.map((recipeId, index) => ({
+        id: recipeId,
+        position: index, // Assign new sequential position
+      }));
+
+      // Perform a batch update
+      const { error } = await supabase
+        .from('recipes')
+        .upsert(updates, { onConflict: 'id' }); // Use upsert with onConflict to update existing rows
+
+      if (error) {
+        console.error('Error updating recipe order:', error);
+        throw error;
+      }
+      queryClient.invalidateQueries({ queryKey: ['recipes', cookbookId] }); // Invalidate to ensure fresh data
+    } catch (error: any) {
+      console.error('Error updating recipe order:', error);
+      toast({
+        title: 'Failed to Reorder Recipes',
+        description: error.message || 'An error occurred while saving the new order.',
+        variant: 'destructive'
+      });
       throw error;
     }
   };
@@ -1331,6 +1406,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         acceptFriendRequest,
         rejectFriendRequest,
         addRecipeToCookbook,
+        updateRecipeOrder, // Added
         sendPasswordResetEmail,
         syncGuestDataToUser,
         saveMealPlan,
