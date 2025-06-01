@@ -288,7 +288,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
             <img 
               src={recipe.image} 
               alt={recipe.title}
-              className="w-20 h-20 object-cover rounded-lg flex-shrink-0"
+              className="w-20 h-20 object-cover rounded-lg flex-shrink-0 md:w-24 md:h-24 lg:w-32 lg:h-32 max-w-full h-auto"
               onError={(e) => {
                 e.currentTarget.style.display = 'none';
               }}
@@ -345,6 +345,28 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
         
         {showFullDetails && (
           <div className="space-y-4 mt-4">
+            {/* New section for detailed meta-data */}
+            <div className="p-3 bg-muted/30 rounded-lg border border-border">
+              <h4 className="font-semibold mb-2 text-sm">📊 Recipe Overview:</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                {recipe.cook_time && (
+                  <p className="flex items-center gap-1"><Clock className="h-4 w-4 text-primary" /> Cook Time: {recipe.cook_time}</p>
+                )}
+                {recipe.servings && (
+                  <p className="flex items-center gap-1"><Users className="h-4 w-4 text-primary" /> Servings: {recipe.servings}</p>
+                )}
+                {recipe.meal_type && (
+                  <p className="flex items-center gap-1"><ChefHat className="h-4 w-4 text-primary" /> Meal Type: {recipe.meal_type}</p>
+                )}
+                {recipe.url && recipe.url !== 'generated' && (
+                  <p className="flex items-center gap-1 col-span-2">
+                    <ExternalLink className="h-4 w-4 text-primary" /> Source: <a href={recipe.url} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary/80 truncate">{new URL(recipe.url).hostname}</a>
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Existing ingredients and instructions sections */}
             <div>
               <h4 className="font-semibold mb-2 text-sm">📝 All Ingredients:</h4>
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
