@@ -47,7 +47,9 @@ const TopBar: React.FC<TopBarProps> = ({
   const [showAuth, setShowAuth] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  // Removed states for Friends, Shopping List, Meal Planner dialogs as they are now in MobileNavMenu
+  const [showFriendsDialog, setShowFriendsDialog] = useState(false); // Re-added state
+  const [showShoppingListDialog, setShowShoppingListDialog] = useState(false); // Re-added state
+  const [showMealPlannerDialog, setShowMealPlannerDialog] = useState(false); // Re-added state
 
   const [hasShownLoginToast, setHasShownLoginToast] = useState(false);
 
@@ -79,6 +81,18 @@ const TopBar: React.FC<TopBarProps> = ({
     }
   };
 
+  const handleFriendsClick = () => {
+    setShowFriendsDialog(true);
+  };
+
+  const handleShoppingListClick = () => {
+    setShowShoppingListDialog(true);
+  };
+
+  const handleMealPlannerClick = () => {
+    setShowMealPlannerDialog(true);
+  };
+
   const iconButtonClasses = "text-white hover:text-white hover:bg-white/10 border border-white/20 hover:border-white/40";
 
   return (
@@ -100,7 +114,7 @@ const TopBar: React.FC<TopBarProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { /* This will be handled by MobileNavMenu on mobile */ }}
+            onClick={handleFriendsClick} // Re-added onClick
             className={cn(iconButtonClasses)}
           >
             <Users className="h-4 w-4" />
@@ -111,7 +125,7 @@ const TopBar: React.FC<TopBarProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { /* This will be handled by MobileNavMenu on mobile */ }}
+            onClick={handleShoppingListClick} // Re-added onClick
             className={cn(iconButtonClasses)}
           >
             <ShoppingCart className="h-4 w-4" />
@@ -122,7 +136,7 @@ const TopBar: React.FC<TopBarProps> = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => { /* This will be handled by MobileNavMenu on mobile */ }}
+            onClick={handleMealPlannerClick} // Re-added onClick
             className={cn(iconButtonClasses)}
           >
             <ChefHat className="h-4 w-4" />
@@ -162,7 +176,31 @@ const TopBar: React.FC<TopBarProps> = ({
       <UserAuth open={showAuth} onOpenChange={setShowAuth} />
       <MessageInbox open={showMessages} onOpenChange={setShowMessages} />
       <UserProfileDialog open={showProfile} onOpenChange={setShowProfile} />
-      {/* Removed dialogs from TopBar as they are now managed by MobileNavMenu or AppLayout */}
+      {/* Re-added dialogs for desktop view */}
+      <FriendsDialog
+        open={showFriendsDialog}
+        onOpenChange={setShowFriendsDialog}
+        onOpenDm={onOpenDm}
+      />
+      <ShoppingListDialog
+        open={showShoppingListDialog}
+        onOpenChange={setShowShoppingListDialog}
+        recipes={recipes}
+        mealPlan={mealPlan}
+        onShoppingListChange={onShoppingListChange}
+      />
+      <MealPlannerDialog
+        open={showMealPlannerDialog}
+        onOpenChange={setShowMealPlannerDialog}
+        recipes={recipes}
+        mealPlan={mealPlan}
+        onMealPlanChange={onMealPlanChange}
+        availableIngredients={availableIngredients}
+        onRecipeGenerated={onRecipeGenerated}
+        selectedMonth={selectedMonth}
+        setSelectedMonth={setSelectedMonth}
+        allRecipes={recipes} // Pass allRecipes for PDF export fallback
+      />
     </div>
   );
 };
