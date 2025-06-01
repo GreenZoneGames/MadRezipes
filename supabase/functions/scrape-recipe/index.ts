@@ -60,13 +60,14 @@ const extractRecipesFromHtml = (html: string, url: string) => {
       const titleElement = doc.querySelector('h1.entry-title, h1.recipe-title, .wprm-recipe-name');
       const title = titleElement?.textContent?.trim() || 'Untitled Recipe (HTML Scrape)';
 
+      // Refined selectors for ingredients and instructions
       const ingredientsList = doc.querySelector('.wprm-recipe-ingredients, .tasty-recipes-ingredients, .recipe-ingredients, .ingredients');
-      const ingredients = Array.from(ingredientsList?.querySelectorAll('li, .wprm-recipe-ingredient') || [])
+      const ingredients = Array.from(ingredientsList?.querySelectorAll('li, .wprm-recipe-ingredient, .ingredient') || []) // Added .ingredient
         .map(li => li.textContent?.trim())
         .filter(Boolean);
 
       const instructionsList = doc.querySelector('.wprm-recipe-instructions, .tasty-recipes-instructions, .recipe-instructions, .instructions');
-      const instructions = Array.from(instructionsList?.querySelectorAll('li, .wprm-recipe-instruction') || [])
+      const instructions = Array.from(instructionsList?.querySelectorAll('li, .wprm-recipe-instruction, .instruction') || []) // Added .instruction
         .map(li => li.textContent?.trim())
         .filter(Boolean);
 
