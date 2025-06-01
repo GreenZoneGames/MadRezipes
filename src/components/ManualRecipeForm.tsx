@@ -286,12 +286,16 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {allAvailableCookbooks.length > 0 && (
-                        <p className="px-2 py-1 text-xs text-muted-foreground">Existing Cookbooks:</p>
+                      {allAvailableCookbooks.length === 0 ? (
+                        <SelectItem value="no-cookbooks" disabled>No cookbooks found. Create one!</SelectItem>
+                      ) : (
+                        <>
+                          <p className="px-2 py-1 text-xs text-muted-foreground">Existing Cookbooks:</p>
+                          {allAvailableCookbooks.map(cb => (
+                            <SelectItem key={cb.id} value={cb.id}>{cb.name} {cb.user_id === 'guest' && '(Unsaved)'}</SelectItem>
+                          ))}
+                        </>
                       )}
-                      {allAvailableCookbooks.map(cb => (
-                        <SelectItem key={cb.id} value={cb.id}>{cb.name} {cb.user_id === 'guest' && '(Unsaved)'}</SelectItem>
-                      ))}
                       <SelectItem value="create-new" className="font-semibold text-blue-500">
                         <Plus className="h-4 w-4 mr-2 inline-block" /> Create New Cookbook...
                       </SelectItem>
