@@ -1,22 +1,5 @@
 import { jsPDF } from 'jspdf';
-
-interface Recipe {
-  id: string;
-  title: string;
-  ingredients: string[];
-  instructions: string[];
-  url: string;
-  image?: string;
-  cook_time?: string;
-  servings?: number;
-  meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string;
-}
-
-export interface MealPlan { // This is the interface for a single meal entry in the plan
-  date: string;
-  recipe: Recipe;
-  mealType?: 'breakfast' | 'lunch' | 'dinner';
-}
+import { Recipe, MealPlan } from '@/types/recipe'; // Import Recipe and MealPlan from central types
 
 const getMealIcon = (mealType: string) => {
   switch (mealType.toLowerCase()) {
@@ -194,7 +177,7 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
   doc.save(`meal-calendar-${monthName.replace(' ', '-')}.pdf`);
 };
 
-const generateFullMonthPlan = (recipes: Recipe[], selectedMonth: string): MealPlan[] => {
+export const generateFullMonthPlan = (recipes: Recipe[], selectedMonth: string): MealPlan[] => {
   if (recipes.length === 0) return [];
 
   const currentDate = new Date();

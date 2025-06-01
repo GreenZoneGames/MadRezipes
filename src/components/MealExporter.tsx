@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, Calendar, ShoppingCart, Trash2, Loader2 } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
-import { MealPlan as MealPlanType, Recipe } from './MealPlanner'; // Import MealPlanType and Recipe from MealPlanner
-import { exportMealPlanToPDF } from '@/utils/pdf-export'; // Import the new utility
+import { MealPlan as MealPlanType } from '@/types/recipe'; // Import MealPlanType from central types
+import { Recipe } from '@/types/recipe'; // Import Recipe from central types
+import { exportMealPlanToPDF, generateFullMonthPlan } from '@/utils/pdf-export'; // Import the new utility
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '@/contexts/AppContext';
 import {
@@ -18,6 +19,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/lib/supabase';
 
 interface MealExporterProps {
   recipes: Recipe[]; // All recipes for PDF generation fallback
@@ -36,15 +39,51 @@ interface SavedMealPlan {
 }
 
 const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan, selectedMonth }) => {
-  const { user, savedMealPlans, loadMealPlans, deleteMealPlan } = useAppContext();
+  const { user, savedMealPlans, loadMealPlans, deleteMealPlan, cookbooks, guestCookbooks, guestRecipes } = useAppContext();
   const [selectedSavedPlanId, setSelectedSavedPlanId] = useState<string>('');
+  const [selectedCookbookForExportId, setSelectedCookbookForExportId] = useState<string>('');
+  const [selectedMonthForExport, setSelectedMonthForExport] = useState<string>(
+    new Date().toLocaleDateString('en-US', { month: 'long' })
+  );
   const [exporting, setExporting] = useState(false);
+  const [generatingAndExporting, setGeneratingAndExporting] = useState(false);
+
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
   useEffect(() => {
     if (user) {
       loadMealPlans(user.id);
     }
   }, [user, loadMealPlans]);
+
+  const currentCookbooks = user ? cookbooks : guestCookbooks;
+
+  // Fetch recipes for the selected cookbook for on-the-fly generation
+  const { data: recipesForExport, isLoading: isLoadingRecipesForExport } = useQuery<Recipe[]>({
+    queryKey: ['recipesForExport', user?.id, selectedCookbookForExportId],
+    queryFn: async () => {
+      if (!selectedCookbookForExportId) return [];
+
+      const selectedCb = currentCookbooks.find(cb => cb.id === selectedCookbookForExportId);
+      if (!selectedCb) return [];
+
+      if (selectedCb.user_id === 'guest') {
+        return guestRecipes.filter(r => r.cookbook_id === selectedCookbookForExportId);
+      }
+
+      const { data, error } = await supabase
+        .from('recipes')
+        .select('*')
+        .eq('user_id', selectedCb.user_id)
+        .eq('cookbook_id', selectedCookbookForExportId);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedCookbookForExportId,
+  });
 
   const selectedPlan = selectedSavedPlanId 
     ? savedMealPlans.find(plan => plan.id === selectedSavedPlanId) 
@@ -90,6 +129,46 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan, selected
       });
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleGenerateAndExport = async () => {
+    if (!selectedCookbookForExportId || !selectedMonthForExport) {
+      toast({
+        title: 'Missing Information',
+        description: 'Please select both a cookbook and a month to generate and export.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    if (!recipesForExport || recipesForExport.length === 0) {
+      toast({
+        title: 'No Recipes in Cookbook',
+        description: 'The selected cookbook has no recipes to generate a plan from.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setGeneratingAndExporting(true);
+    try {
+      const generatedPlan = generateFullMonthPlan(recipesForExport, selectedMonthForExport);
+      if (generatedPlan.length === 0) {
+        throw new Error('Could not generate a meal plan with the selected recipes.');
+      }
+      await exportMealPlanToPDF(generatedPlan, selectedMonthForExport, recipesForExport);
+      toast({
+        title: 'Meal Plan PDF Generated!',
+        description: `A new meal plan for ${selectedMonthForExport} has been generated and downloaded.`
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Generation & Export Failed',
+        description: error.message || 'An error occurred while generating and exporting the meal plan.',
+        variant: 'destructive'
+      });
+    } finally {
+      setGeneratingAndExporting(false);
     }
   };
 
@@ -192,7 +271,68 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan, selected
             )}
           </Button>
           
-          <div className="text-sm text-muted-foreground space-y-1 text-center">
+          <div className="border-t pt-4 mt-4 space-y-4">
+            <h3 className="font-semibold text-lg flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-blue-500" />
+              Generate & Export New Plan
+            </h3>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Select Cookbook:</label>
+              <Select value={selectedCookbookForExportId} onValueChange={setSelectedCookbookForExportId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a cookbook" />
+                </SelectTrigger>
+                <SelectContent>
+                  {currentCookbooks.length === 0 ? (
+                    <SelectItem value="no-cookbooks" disabled>No cookbooks available</SelectItem>
+                  ) : (
+                    currentCookbooks.map(cb => (
+                      <SelectItem key={cb.id} value={cb.id}>
+                        {cb.name} {cb.user_id === 'guest' && '(Unsaved)'}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground">Select Month:</label>
+              <Select value={selectedMonthForExport} onValueChange={setSelectedMonthForExport}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map(month => (
+                    <SelectItem key={month} value={month}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button 
+              onClick={handleGenerateAndExport}
+              disabled={generatingAndExporting || !selectedCookbookForExportId || !selectedMonthForExport || isLoadingRecipesForExport || (recipesForExport?.length || 0) === 0}
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white hover-lift transition-all duration-300 shadow-lg"
+            >
+              {generatingAndExporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Generating & Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Generate & Export PDF
+                </>
+              )}
+            </Button>
+            {isLoadingRecipesForExport && (
+              <p className="text-center text-sm text-muted-foreground">Loading recipes for selected cookbook...</p>
+            )}
+          </div>
+
+          <div className="text-sm text-muted-foreground space-y-1 text-center pt-4 border-t mt-4">
             <div className="flex items-center justify-center gap-2">
               <Calendar className="h-4 w-4 text-primary" />
               <span>Full month calendar with meal titles and icons</span>
