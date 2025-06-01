@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { BookOpen, Plus, Trash2, Edit, Loader2, Save, Globe, Lock, CalendarDays, Printer, UserPlus, Check, X, Users } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Edit, Loader2, Save, Globe, Lock, CalendarDays, Printer, UserPlus, Check, X, Users, ListOrdered } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -176,6 +176,9 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
 
   const [showManageCollaboratorsDialog, setShowManageCollaboratorsDialog] = useState(false);
   const [cookbookToManageCollaborators, setCookbookToManageCollaborators] = useState<Cookbook | null>(null);
+
+  // New state for managing recipes dialog
+  const [showManageRecipesDialog, setShowManageRecipesDialog] = useState(false);
 
   // DND state
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -875,6 +878,11 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                   )}
                 </h4>
                 <div className="flex items-center gap-2">
+                  {currentSelectedCookbook && (
+                    <Button variant="ghost" size="sm" onClick={() => setShowManageRecipesDialog(true)} disabled={isLoadingCurrentRecipes}>
+                      <ListOrdered className="h-4 w-4" />
+                    </Button>
+                  )}
                   {canManageCollaborators && currentSelectedCookbook && (
                     <Button variant="ghost" size="sm" onClick={() => handleManageCollaborators(currentSelectedCookbook)}>
                       <Users className="h-4 w-4" />
@@ -1172,6 +1180,61 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
               </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-4">No collaborators yet. Invite some!</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Recipes Dialog */}
+      <Dialog open={showManageRecipesDialog} onOpenChange={setShowManageRecipesDialog}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ListOrdered className="h-5 w-5" /> Manage Recipes in "{currentSelectedCookbook?.name}"
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {isLoadingCurrentRecipes ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                Loading recipes...
+              </div>
+            ) : recipesToDisplay && recipesToDisplay.length > 0 ? (
+              <DndContext 
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragCancel={handleDragCancel}
+              >
+                <SortableContext 
+                  items={recipesToDisplay.map(r => r.id)} 
+                  strategy={verticalListSortingStrategy}
+                >
+                  {recipesToDisplay.map(recipe => (
+                    <SortableRecipeItem 
+                      key={recipe.id} 
+                      recipe={recipe} 
+                      onClick={handleViewRecipeDetails}
+                      onRemove={handleRemoveRecipe}
+                      canRemove={canAddRemoveRecipes}
+                    />
+                  ))}
+                </SortableContext>
+                <DragOverlay>
+                  {activeId ? (
+                    <div className="p-2 border rounded-lg bg-background/80 shadow-lg">
+                      <span className="text-sm font-medium truncate">
+                        {getActiveRecipe(activeId)?.title}
+                      </span>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No recipes in this cookbook yet. Add some!
+              </p>
             )}
           </div>
         </DialogContent>
