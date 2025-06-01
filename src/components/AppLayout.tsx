@@ -23,7 +23,7 @@ const AppLayout: React.FC = () => {
   const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
   const [shoppingList, setShoppingList] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [mealTypeFilter, setMealTypeFilter] = useState('');
+  const [mealTypeFilter, setMealTypeFilter] = useState('all'); // Changed initial state to 'all'
 
   const handleRecipeAdded = (recipe: Recipe) => {
     setRecipes(prev => {
@@ -73,7 +73,7 @@ const AppLayout: React.FC = () => {
         recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(searchTerm.toLowerCase()));
       
-      const matchesMealType = mealTypeFilter === '' ||
+      const matchesMealType = mealTypeFilter === 'all' || // Changed condition to 'all'
         (recipe.meal_type && recipe.meal_type.toLowerCase() === mealTypeFilter.toLowerCase());
       
       return matchesSearch && matchesMealType;
@@ -84,7 +84,7 @@ const AppLayout: React.FC = () => {
 
   const handleClearFilters = () => {
     setSearchTerm('');
-    setMealTypeFilter('');
+    setMealTypeFilter('all'); // Changed to 'all'
   };
 
   return (
@@ -149,7 +149,7 @@ const AppLayout: React.FC = () => {
                     <SelectValue placeholder="Filter by meal type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Meal Types</SelectItem>
+                    <SelectItem value="all">All Meal Types</SelectItem> {/* Changed value to 'all' */}
                     {mealTypes.map(type => (
                       <SelectItem key={type} value={type}>
                         <span className="flex items-center gap-2">
@@ -159,7 +159,7 @@ const AppLayout: React.FC = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {(searchTerm !== '' || mealTypeFilter !== '') && (
+                {(searchTerm !== '' || mealTypeFilter !== 'all') && (
                   <Button variant="outline" onClick={handleClearFilters} className="w-full sm:w-auto">
                     <XCircle className="h-4 w-4 mr-2" /> Clear Filters
                   </Button>

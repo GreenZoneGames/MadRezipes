@@ -26,7 +26,7 @@ const formSchema = z.object({
     (val) => (val === '' ? undefined : Number(val)),
     z.number().int().positive({ message: 'Servings must be a positive number.' }).optional()
   ),
-  mealType: z.enum(['Breakfast', 'Lunch', 'Dinner', 'Appetizer', 'Dessert', 'Snack']).optional().or(z.literal('')),
+  mealType: z.enum(['Breakfast', 'Lunch', 'Dinner', 'Appetizer', 'Dessert', 'Snack', 'none']).optional().or(z.literal('none')), // Added 'none' to enum and literal
   cookbookId: z.string().min(1, { message: 'Please select a cookbook.' }),
 });
 
@@ -55,7 +55,7 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
       image: '',
       cookTime: '',
       servings: undefined,
-      mealType: '',
+      mealType: 'none', // Changed default value to 'none'
       cookbookId: '',
     },
   });
@@ -94,7 +94,7 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
         image: values.image || null,
         cook_time: values.cookTime || null,
         servings: values.servings || null,
-        meal_type: values.mealType || null,
+        meal_type: values.mealType === 'none' ? null : values.mealType, // Handle 'none' value
         categorized_ingredients: {}, // Manual entry doesn't categorize, leave empty or add logic later
       };
 
@@ -242,6 +242,7 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="none">None</SelectItem> {/* Changed value to 'none' */}
                         <SelectItem value="Breakfast">Breakfast</SelectItem>
                         <SelectItem value="Lunch">Lunch</SelectItem>
                         <SelectItem value="Dinner">Dinner</SelectItem>
