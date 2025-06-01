@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -50,7 +50,12 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
   const [newCookbookName, setNewCookbookName] = useState('');
   const [creatingCookbook, setCreatingCookbook] = useState(false);
 
-  const currentCookbooks = user ? cookbooks : guestCookbooks;
+  const allAvailableCookbooks = useMemo(() => {
+    const combined = [...cookbooks, ...guestCookbooks];
+    const uniqueMap = new Map<string, typeof combined[0]>();
+    combined.forEach(cb => uniqueMap.set(cb.id, cb));
+    return Array.from(uniqueMap.values());
+  }, [user, cookbooks, guestCookbooks]);
 
   const handleScrape = async () => {
     if (!url.trim()) {
@@ -125,7 +130,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
   };
 
   const handleAddSelectedToCookbook = async () => {
-    if (currentCookbooks.length === 0) {
+    if (allAvailableCookbooks.length === 0) {
       toast({ title: 'No Cookbooks', description: 'Please create a cookbook first.', variant: 'destructive' });
       return;
     }
@@ -275,13 +280,13 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                         </DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
-                        {currentCookbooks.length > 0 ? (
+                        {allAvailableCookbooks.length > 0 ? (
                           <Select value={selectedCookbookId} onValueChange={setSelectedCookbookId}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select an existing cookbook" />
                             </SelectTrigger>
                             <SelectContent>
-                              {currentCookbooks.map(cb => (
+                              {allAvailableCookbooks.map(cb => (
                                 <SelectItem key={cb.id} value={cb.id}>{cb.name} {cb.user_id === 'guest' && '(Unsaved)'}</SelectItem>
                               ))}
                             </SelectContent>

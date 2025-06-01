@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,7 +43,12 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
   const [creatingCookbook, setCreatingCookbook] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const currentCookbooks = user ? cookbooks : guestCookbooks;
+  const allAvailableCookbooks = useMemo(() => {
+    const combined = [...cookbooks, ...guestCookbooks];
+    const uniqueMap = new Map<string, typeof combined[0]>();
+    combined.forEach(cb => uniqueMap.set(cb.id, cb));
+    return Array.from(uniqueMap.values());
+  }, [user, cookbooks, guestCookbooks]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -270,10 +275,10 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {currentCookbooks.length === 0 ? (
+                        {allAvailableCookbooks.length === 0 ? (
                           <SelectItem value="no-cookbooks" disabled>No cookbooks found</SelectItem>
                         ) : (
-                          currentCookbooks.map(cb => (
+                          allAvailableCookbooks.map(cb => (
                             <SelectItem key={cb.id} value={cb.id}>{cb.name} {cb.user_id === 'guest' && '(Unsaved)'}</SelectItem>
                           ))
                         )}

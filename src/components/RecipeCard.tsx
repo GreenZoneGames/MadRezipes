@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, Users, ExternalLink, ChefHat, BookOpen, Plus, Share2, Printer, MessageSquare } from 'lucide-react';
@@ -53,7 +53,12 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
   const [creatingCookbook, setCreatingCookbook] = useState(false);
   const [addingRecipe, setAddingRecipe] = useState(false);
 
-  const currentCookbooks = user ? cookbooks : guestCookbooks;
+  const allAvailableCookbooks = useMemo(() => {
+    const combined = [...cookbooks, ...guestCookbooks];
+    const uniqueMap = new Map<string, typeof combined[0]>();
+    combined.forEach(cb => uniqueMap.set(cb.id, cb));
+    return Array.from(uniqueMap.values());
+  }, [user, cookbooks, guestCookbooks]);
 
   const categoryColors = {
     proteins: 'bg-red-100 text-red-800',
@@ -76,7 +81,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
   };
 
   const handleAddRecipeToCookbook = async () => {
-    if (currentCookbooks.length === 0) {
+    if (allAvailableCookbooks.length === 0) {
       toast({ title: 'No Cookbooks', description: 'Please create a cookbook first.', variant: 'destructive' });
       return;
     }
@@ -349,13 +354,13 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                {currentCookbooks.length > 0 ? (
+                {allAvailableCookbooks.length > 0 ? (
                   <Select value={selectedCookbookId} onValueChange={setSelectedCookbookId}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select an existing cookbook" />
                     </SelectTrigger>
                     <SelectContent>
-                      {currentCookbooks.map(cb => (
+                      {allAvailableCookbooks.map(cb => (
                         <SelectItem key={cb.id} value={cb.id}>{cb.name} {cb.user_id === 'guest' && '(Unsaved)'}</SelectItem>
                       ))}
                     </SelectContent>
