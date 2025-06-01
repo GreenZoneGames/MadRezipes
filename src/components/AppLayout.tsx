@@ -4,7 +4,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import RecipeScraper from './RecipeScraper';
 import RecipeCard from './RecipeCard';
 import ShoppingList from './ShoppingList';
-import ShoppingListPDF from './ShoppingListPDF'; // Added this import
+import ShoppingListPDF from './ShoppingListPDF';
 import MealPlanner, { MealPlan } from './MealPlanner';
 import MealExporter from './MealExporter';
 import TopBar from './TopBar';
@@ -150,11 +150,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                 recipes={localRecipes}
                 mealPlan={localMealPlan}
                 onShoppingListChange={handleLocalShoppingListChange}
-                onMealPlanChange={handleLocalMealPlanChange} // Pass to TopBar
-                availableIngredients={localShoppingList} // Pass to TopBar
-                onRecipeGenerated={handleRecipeGenerated} // Pass to TopBar
-                selectedMonth={selectedMonth} // Pass to TopBar
-                setSelectedMonth={setSelectedMonth} // Pass to TopBar
+                onMealPlanChange={handleLocalMealPlanChange}
+                availableIngredients={localShoppingList}
+                onRecipeGenerated={handleRecipeGenerated}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
               />
             </div>
           </div>
@@ -195,8 +195,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           <div className={`space-y-6 ${
             isMobile ? 'order-2' : ''
           }`}>
-            {/* MealPlanner is now rendered via dialog */}
-            <MealExporter recipes={localRecipes} mealPlan={localMealPlan} selectedMonth={selectedMonth} />
             <ShoppingListPDF mealPlan={localMealPlan} selectedMonth={selectedMonth} />
           </div>
         </div>

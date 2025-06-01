@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, MessageCircle, BookOpen, Users, ShoppingCart, ChefHat } from 'lucide-react';
+import { User, LogIn, MessageCircle, BookOpen, Users, ShoppingCart, ChefHat, Download } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -11,7 +11,8 @@ import UserProfileDialog from './UserProfileDialog';
 import MyCookbooksDialog from './MyCookbooksDialog';
 import FriendsDialog from './FriendsDialog';
 import ShoppingListDialog from './ShoppingListDialog';
-import MealPlannerDialog from './MealPlannerDialog'; // Import the new dialog
+import MealPlannerDialog from './MealPlannerDialog';
+import MealExporterDialog from './MealExporterDialog'; // Import the new dialog
 import { cn } from '@/lib/utils';
 import { MealPlan } from './MealPlanner'; // Import MealPlan type
 import { Recipe } from './RecipeScraper'; // Import Recipe type
@@ -20,14 +21,14 @@ interface TopBarProps {
   onRecipeRemoved: (id: string) => void;
   setActiveTab: (tab: string) => void;
   onOpenDm: (recipientId: string, recipientUsername: string) => void;
-  recipes: Recipe[]; // Added for ShoppingListDialog and MealPlannerDialog
-  mealPlan: MealPlan[]; // Added for ShoppingListDialog and MealPlannerDialog
-  onShoppingListChange: (ingredients: string[]) => void; // Added for ShoppingListDialog
-  onMealPlanChange: (mealPlan: MealPlan[]) => void; // Added for MealPlannerDialog
-  availableIngredients: string[]; // Added for MealPlannerDialog
-  onRecipeGenerated: (recipe: Recipe) => void; // Added for MealPlannerDialog
-  selectedMonth: string; // Added for MealPlannerDialog
-  setSelectedMonth: (month: string) => void; // Added for MealPlannerDialog
+  recipes: Recipe[];
+  mealPlan: MealPlan[];
+  onShoppingListChange: (ingredients: string[]) => void;
+  onMealPlanChange: (mealPlan: MealPlan[]) => void;
+  availableIngredients: string[];
+  onRecipeGenerated: (recipe: Recipe) => void;
+  selectedMonth: string;
+  setSelectedMonth: (month: string) => void;
 }
 
 const TopBar: React.FC<TopBarProps> = ({ 
@@ -51,7 +52,8 @@ const TopBar: React.FC<TopBarProps> = ({
   const [showCookbooksDialog, setShowCookbooksDialog] = useState(false);
   const [showFriendsDialog, setShowFriendsDialog] = useState(false);
   const [showShoppingListDialog, setShowShoppingListDialog] = useState(false);
-  const [showMealPlannerDialog, setShowMealPlannerDialog] = useState(false); // New state for meal planner dialog
+  const [showMealPlannerDialog, setShowMealPlannerDialog] = useState(false);
+  const [showMealExporterDialog, setShowMealExporterDialog] = useState(false); // New state for meal exporter dialog
   const [hasShownLoginToast, setHasShownLoginToast] = useState(false);
 
   useEffect(() => {
@@ -94,8 +96,12 @@ const TopBar: React.FC<TopBarProps> = ({
     setShowShoppingListDialog(true);
   };
 
-  const handleMealPlannerClick = () => { // New handler for meal planner dialog
+  const handleMealPlannerClick = () => {
     setShowMealPlannerDialog(true);
+  };
+
+  const handleMealExporterClick = () => { // New handler for meal exporter dialog
+    setShowMealExporterDialog(true);
   };
 
   const iconButtonClasses = "text-white hover:text-white hover:bg-white/10 border border-white/20 hover:border-white/40";
@@ -157,6 +163,17 @@ const TopBar: React.FC<TopBarProps> = ({
         {!isMobile && <span className="ml-1">Planner</span>}
       </Button>
 
+      {/* Meal Exporter Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleMealExporterClick}
+        className={cn(iconButtonClasses)}
+      >
+        <Download className="h-4 w-4" />
+        {!isMobile && <span className="ml-1">Export</span>}
+      </Button>
+
       {/* User Profile / Sign In Button */}
       {user ? (
         <div className={cn(
@@ -216,7 +233,14 @@ const TopBar: React.FC<TopBarProps> = ({
         onRecipeGenerated={onRecipeGenerated}
         selectedMonth={selectedMonth}
         setSelectedMonth={setSelectedMonth}
-        allRecipes={recipes} // Pass allRecipes here
+        allRecipes={recipes}
+      />
+      <MealExporterDialog
+        open={showMealExporterDialog}
+        onOpenChange={setShowMealExporterDialog}
+        recipes={recipes}
+        mealPlan={mealPlan}
+        selectedMonth={selectedMonth}
       />
     </div>
   );
