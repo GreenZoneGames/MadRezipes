@@ -1158,6 +1158,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         position: guestRecipes.filter(r => r.cookbook_id === cookbookId).length, // Assign position for guest recipes
       };
       setGuestRecipes(prev => [...prev, newGuestRecipe]);
+      console.log('AppContext - Added guest recipe:', newGuestRecipe);
       toast({
         title: 'Recipe Added!',
         description: `${recipe.title} has been added to your temporary cookbook. Sign in to save it permanently!`,
@@ -1243,7 +1244,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .single();
       
       if (error) throw error;
-      console.log('Recipe added to cookbook:', data);
+      console.log('AppContext - Added DB recipe:', data);
+      console.log('AppContext - Invalidating recipes query for cookbook:', cookbookId);
       toast({
         title: 'Recipe Added!',
         description: `${recipe.title} has been added to your cookbook.`,

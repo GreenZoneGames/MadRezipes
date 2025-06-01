@@ -155,6 +155,8 @@ const CookbookDetailsDialog: React.FC<CookbookDetailsDialogProps> = ({
   const canManageCollaborators = isOwnerOfCookbook;
   const canReorderRecipes = isOwnerOfCookbook || isCollaboratorOnCookbook;
 
+  console.log('CookbookDetailsDialog - cookbook:', cookbook);
+
   const { data: dbRecipes, isLoading: isLoadingDbRecipes } = useQuery<Recipe[]>({
     queryKey: ['recipes', user?.id, cookbook?.id],
     queryFn: async () => {
@@ -178,9 +180,13 @@ const CookbookDetailsDialog: React.FC<CookbookDetailsDialogProps> = ({
     enabled: !!cookbook && cookbook.user_id !== 'guest',
   });
 
+  console.log('CookbookDetailsDialog - dbRecipes:', dbRecipes);
+
   const guestRecipesForSelectedCookbook = cookbook && cookbook.user_id === 'guest'
     ? guestRecipes.filter(recipe => recipe.cookbook_id === cookbook.id).sort((a, b) => (a.position || 0) - (b.position || 0))
     : [];
+
+  console.log('CookbookDetailsDialog - guestRecipesForSelectedCookbook:', guestRecipesForSelectedCookbook);
 
   const [recipesToDisplay, setRecipesToDisplay] = useState<Recipe[]>([]);
 
@@ -193,6 +199,8 @@ const CookbookDetailsDialog: React.FC<CookbookDetailsDialogProps> = ({
       setRecipesToDisplay([]);
     }
   }, [dbRecipes, guestRecipesForSelectedCookbook, user, cookbook]);
+
+  console.log('CookbookDetailsDialog - recipesToDisplay:', recipesToDisplay);
 
   const handleRemoveRecipe = async (recipeId: string) => {
     if (!cookbook) return;
