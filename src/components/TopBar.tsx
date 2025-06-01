@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, MessageCircle, BookOpen, Users, ShoppingCart, ChefHat, Download } from 'lucide-react';
+import { User, LogIn, MessageCircle, BookOpen, Users, ShoppingCart, ChefHat } from 'lucide-react'; // Removed Download icon
 import { useAppContext } from '@/contexts/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -12,7 +12,7 @@ import MyCookbooksDialog from './MyCookbooksDialog';
 import FriendsDialog from './FriendsDialog';
 import ShoppingListDialog from './ShoppingListDialog';
 import MealPlannerDialog from './MealPlannerDialog';
-import MealExporterDialog from './MealExporterDialog'; // Import the new dialog
+// import MealExporterDialog from './MealExporterDialog'; // Removed import
 import { cn } from '@/lib/utils';
 import { MealPlan } from './MealPlanner'; // Import MealPlan type
 import { Recipe } from './RecipeScraper'; // Import Recipe type
@@ -53,7 +53,7 @@ const TopBar: React.FC<TopBarProps> = ({
   const [showFriendsDialog, setShowFriendsDialog] = useState(false);
   const [showShoppingListDialog, setShowShoppingListDialog] = useState(false);
   const [showMealPlannerDialog, setShowMealPlannerDialog] = useState(false);
-  const [showMealExporterDialog, setShowMealExporterDialog] = useState(false); // New state for meal exporter dialog
+  // const [showMealExporterDialog, setShowMealExporterDialog] = useState(false); // Removed state
   const [hasShownLoginToast, setHasShownLoginToast] = useState(false);
 
   useEffect(() => {
@@ -100,9 +100,9 @@ const TopBar: React.FC<TopBarProps> = ({
     setShowMealPlannerDialog(true);
   };
 
-  const handleMealExporterClick = () => { // New handler for meal exporter dialog
-    setShowMealExporterDialog(true);
-  };
+  // const handleMealExporterClick = () => { // Removed handler
+  //   setShowMealExporterDialog(true);
+  // };
 
   const iconButtonClasses = "text-white hover:text-white hover:bg-white/10 border border-white/20 hover:border-white/40";
 
@@ -163,8 +163,8 @@ const TopBar: React.FC<TopBarProps> = ({
         {!isMobile && <span className="ml-1">Planner</span>}
       </Button>
 
-      {/* Meal Exporter Button */}
-      <Button
+      {/* Meal Exporter Button (Removed) */}
+      {/* <Button
         variant="ghost"
         size="sm"
         onClick={handleMealExporterClick}
@@ -172,7 +172,7 @@ const TopBar: React.FC<TopBarProps> = ({
       >
         <Download className="h-4 w-4" />
         {!isMobile && <span className="ml-1">Export</span>}
-      </Button>
+      </Button> */}
 
       {/* User Profile / Sign In Button */}
       {user ? (
@@ -235,13 +235,14 @@ const TopBar: React.FC<TopBarProps> = ({
         setSelectedMonth={setSelectedMonth}
         allRecipes={recipes}
       />
-      <MealExporterDialog
+      {/* MealExporterDialog (Removed) */}
+      {/* <MealExporterDialog
         open={showMealExporterDialog}
         onOpenChange={setShowMealExporterDialog}
         recipes={recipes}
         mealPlan={mealPlan}
         selectedMonth={selectedMonth}
-      />
+      /> */}
     </div>
   );
 };
