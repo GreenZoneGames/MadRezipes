@@ -44,7 +44,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { arrayMove } from 'array-move'; // Corrected import to named export
+import { arrayMove } from '@/utils/array-utils'; // Corrected import
 
 interface CategorizedIngredients {
   proteins: string[];
