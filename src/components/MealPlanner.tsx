@@ -45,7 +45,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
   setSelectedMonth,
   allRecipes // Receive allRecipes
 }) => {
-  const { user, selectedCookbook, guestRecipes, saveMealPlan } = useAppContext(); // Get selectedCookbook, guestRecipes, and saveMealPlan
+  const { user, cookbooks, selectedCookbook, setSelectedCookbook, guestCookbooks, guestRecipes, saveMealPlan } = useAppContext(); // Get selectedCookbook, guestRecipes, and saveMealPlan
   const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
   const [generatingRecipe, setGeneratingRecipe] = useState(false);
   const [savingPlan, setSavingPlan] = useState(false);
@@ -56,6 +56,14 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
   ];
 
   const mealTypes: ('breakfast' | 'lunch' | 'dinner')[] = ['breakfast', 'lunch', 'dinner']; // These are the daily slots
+
+  // Combine user's cookbooks and guest cookbooks
+  const allAvailableCookbooks = useMemo(() => {
+    if (user) {
+      return [...cookbooks, ...guestCookbooks.filter(cb => cb.user_id === 'guest')];
+    }
+    return guestCookbooks;
+  }, [user, cookbooks, guestCookbooks]);
 
   // Fetch recipes for the selected cookbook
   const { data: dbRecipes, isLoading: isLoadingDbRecipes } = useQuery<Recipe[]>({
@@ -265,11 +273,36 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
+            <Select
+              value={selectedCookbook?.id || ''}
+              onValueChange={(value) => {
+                const cookbook = allAvailableCookbooks.find(c => c.id === value);
+                setSelectedCookbook(cookbook || null);
+              }}
+            >
+              <SelectTrigger className="flex-1 bg-background/50 border-border/50">
+                <SelectValue placeholder="📚 Select a cookbook" />
+              </SelectTrigger>
+              <SelectContent>
+                {allAvailableCookbooks.length === 0 ? (
+                  <SelectItem value="no-cookbooks" disabled>No cookbooks found. Create one!</SelectItem>
+                ) : (
+                  allAvailableCookbooks.map(cb => (
+                    <SelectItem key={cb.id} value={cb.id}>
+                      {cb.name} {cb.user_id === 'guest' && '(Unsaved)'}
+                      {cb.is_owner && ' (Owner)'}
+                      {cb.is_collaborator && ' (Collaborator)'}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+
             {!selectedCookbook ? (
               <div className="text-center py-6 bg-gradient-to-br from-blue-50/30 to-purple-50/30 rounded-lg border border-dashed border-blue-200">
                 <BookOpen className="h-12 w-12 text-blue-400 mx-auto mb-2" />
                 <p className="text-muted-foreground">
-                  Please select a cookbook from "My Cookbooks" to start planning meals.
+                  Please select a cookbook to start planning meals.
                 </p>
               </div>
             ) : isLoadingRecipes ? (
