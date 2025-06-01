@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, MessageCircle, BookOpen } from 'lucide-react';
+import { User, LogIn, MessageCircle, BookOpen, Users } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -8,37 +8,38 @@ import { toast } from '@/components/ui/use-toast';
 import MessageInbox from './MessageInbox';
 import UserAuth from './UserAuth';
 import UserProfileDialog from './UserProfileDialog';
-import MyCookbooksDialog from './MyCookbooksDialog'; // Import the new dialog
-import { cn } from '@/lib/utils'; // Import cn for conditional class names
+import MyCookbooksDialog from './MyCookbooksDialog';
+import FriendsDialog from './FriendsDialog'; // Import the new dialog
+import { cn } from '@/lib/utils';
 
 interface TopBarProps {
-  onRecipeRemoved: (id: string) => void; // Prop to pass to MyCookbooksDialog
-  setActiveTab: (tab: string) => void; // Prop to pass to MyCookbooksDialog
+  onRecipeRemoved: (id: string) => void;
+  setActiveTab: (tab: string) => void;
+  onOpenDm: (recipientId: string, recipientUsername: string) => void; // New prop
 }
 
-const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab }) => {
+const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm }) => {
   const { user } = useAppContext();
   const isMobile = useIsMobile();
   const [showAuth, setShowAuth] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showCookbooksDialog, setShowCookbooksDialog] = useState(false); // New state for cookbooks dialog
-  const [hasShownLoginToast, setHasShownLoginToast] = useState(false); // New state to track toast display
+  const [showCookbooksDialog, setShowCookbooksDialog] = useState(false);
+  const [showFriendsDialog, setShowFriendsDialog] = useState(false); // New state for friends dialog
+  const [hasShownLoginToast, setHasShownLoginToast] = useState(false);
 
   useEffect(() => {
-    // Check if user just logged in (user is not null, and toast hasn't been shown yet)
     if (user && !hasShownLoginToast) {
       const displayName = user.username || user.email?.split('@')[0] || 'User';
       toast({
         title: `🍽️ Welcome back, ${displayName}!`,
         description: 'Successfully signed in to MadRezipes.'
       });
-      setHasShownLoginToast(true); // Mark toast as shown
+      setHasShownLoginToast(true);
     } else if (!user && hasShownLoginToast) {
-      // If user logs out, reset the flag so toast can be shown again on next login
       setHasShownLoginToast(false);
     }
-  }, [user, hasShownLoginToast]); // Depend on user and hasShownLoginToast
+  }, [user, hasShownLoginToast]);
 
   const displayName = user?.username || user?.email?.split('@')[0] || 'User';
 
@@ -59,16 +60,19 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab }) => {
     setShowCookbooksDialog(true);
   };
 
+  const handleFriendsClick = () => { // New handler for friends dialog
+    setShowFriendsDialog(true);
+  };
+
   return (
     <div className="flex items-center gap-3">
-      {/* Message Inbox Button - Always present, behavior changes based on login */}
+      {/* Message Inbox Button */}
       <Button
         variant="ghost"
         size="sm"
         onClick={handleMessageClick}
         className={cn(
           "text-white hover:text-white hover:bg-white/10 transition-all duration-500 ease-in-out",
-          // No animation for this one, it's always visible
         )}
       >
         <MessageCircle className="h-4 w-4" />
@@ -86,11 +90,22 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab }) => {
         {!isMobile && <span className="ml-1">Cookbooks</span>}
       </Button>
 
+      {/* Friends Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleFriendsClick}
+        className="text-white hover:text-white hover:bg-white/10 border border-white/20 hover:border-white/40"
+      >
+        <Users className="h-4 w-4" />
+        {!isMobile && <span className="ml-1">Friends</span>}
+      </Button>
+
       {/* User Profile / Sign In Button */}
       {user ? (
         <div className={cn(
           "flex items-center gap-2 transition-all duration-500 ease-in-out",
-          "opacity-100 translate-x-0" // Always visible when logged in
+          "opacity-100 translate-x-0"
         )}>
           <Button 
             variant="ghost" 
@@ -109,7 +124,7 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab }) => {
           onClick={() => setShowAuth(true)}
           className={cn(
             "text-white hover:text-white hover:bg-white/10 border border-white/20 transition-all duration-500 ease-in-out",
-            "opacity-100 translate-x-0" // Always visible when logged out
+            "opacity-100 translate-x-0"
           )}
         >
           <LogIn className="h-4 w-4" />
@@ -125,6 +140,11 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab }) => {
         onOpenChange={setShowCookbooksDialog} 
         onRecipeRemoved={onRecipeRemoved}
         setActiveTab={setActiveTab}
+      />
+      <FriendsDialog 
+        open={showFriendsDialog} 
+        onOpenChange={setShowFriendsDialog} 
+        onOpenDm={onOpenDm} 
       />
     </div>
   );

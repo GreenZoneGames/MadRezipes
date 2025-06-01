@@ -30,9 +30,10 @@ interface AppLayoutProps {
   children: React.ReactNode;
   onRecipeRemoved: (id: string) => void;
   setActiveTab: (tab: string) => void;
+  onOpenDm: (recipientId: string, recipientUsername: string) => void; // New prop
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setActiveTab }) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setActiveTab, onOpenDm }) => {
   const { sidebarOpen, toggleSidebar } = useAppContext();
   const isMobile = useIsMobile();
   const [recipes, setRecipes] = useState<Recipe[]>([]); // This state will now primarily hold scraped/generated recipes before DB save, and then be updated by DB changes.
@@ -111,7 +112,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
               }`}>
                 {recipes.length} recipes • {mealPlan.length} meals
               </div>
-              <TopBar onRecipeRemoved={onRecipeRemoved} setActiveTab={setActiveTab} /> {/* Pass props here */}
+              <TopBar 
+                onRecipeRemoved={onRecipeRemoved} 
+                setActiveTab={setActiveTab} 
+                onOpenDm={onOpenDm} // Pass onOpenDm here
+              />
             </div>
           </div>
         </div>
@@ -152,7 +157,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
             isMobile ? 'order-2' : ''
           }`}>
             {/* CookbookManager is now rendered inside MyCookbooksDialog, which is in TopBar */}
-            <FriendsList />
+            {/* FriendsList is now rendered inside FriendsDialog, which is in TopBar */}
             <ShoppingList 
               recipes={recipes} 
               onShoppingListChange={handleShoppingListChange}

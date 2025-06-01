@@ -96,7 +96,11 @@ const Index = () => {
 
   return (
     <AppProvider>
-      <AppLayout onRecipeRemoved={handleRecipeRemoved} setActiveTab={setActiveTab}> {/* Pass props to AppLayout */}
+      <AppLayout 
+        onRecipeRemoved={handleRecipeRemoved} 
+        setActiveTab={setActiveTab}
+        onOpenDm={handleOpenDm} // Pass onOpenDm here
+      >
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50">
           <div className="container mx-auto p-6 space-y-8">
             <div className="text-center mb-8">
@@ -109,9 +113,8 @@ const Index = () => {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4"> {/* Adjusted grid columns */}
+              <TabsList className="grid w-full grid-cols-3"> {/* Adjusted grid columns */}
                 <TabsTrigger value="planner">Meal Planner</TabsTrigger>
-                <TabsTrigger value="community">Community</TabsTrigger>
                 <TabsTrigger value="add-recipe">Add Recipe</TabsTrigger>
                 <TabsTrigger value="discover">Discover</TabsTrigger>
               </TabsList>
@@ -149,17 +152,13 @@ const Index = () => {
                 </div>
               </TabsContent>
               
-              <TabsContent value="community">
-                <FriendsList onOpenDm={handleOpenDm} />
-              </TabsContent>
+              {/* Removed 'community' tab content */}
               
-              {/* Removed 'recipes' tab content */}
-
               <TabsContent value="add-recipe">
                 <ManualRecipeForm onRecipeAdded={handleRecipeAdded} />
               </TabsContent>
 
-              <TabsContent value="discover"> {/* New Tab Content */}
+              <TabsContent value="discover">
                 <DiscoverRecipes onRecipeAdded={handleRecipeAdded} />
               </TabsContent>
             </Tabs>
