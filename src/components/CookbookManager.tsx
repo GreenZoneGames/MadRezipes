@@ -44,7 +44,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { arrayMove } from '@/utils/array-utils'; // Corrected import
+import { arrayMove } from '@/utils/array-utils';
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -77,8 +77,8 @@ interface Cookbook {
   description?: string;
   user_id: string;
   is_public: boolean;
-  is_owner?: boolean;
-  is_collaborator?: boolean;
+  is_owner?: boolean; // Added for UI convenience
+  is_collaborator?: boolean; // Added for UI convenience
 }
 
 interface CookbookCollaborator {
@@ -188,6 +188,15 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   ).values());
 
   const currentSelectedCookbook = selectedCookbook || (uniqueCookbooks.length > 0 ? uniqueCookbooks[0] : null);
+
+  // Define permission variables here, after currentSelectedCookbook is determined
+  const isOwnerOfSelectedCookbook = user && currentSelectedCookbook?.user_id === user.id;
+  const isCollaboratorOnSelectedCookbook = user && currentSelectedCookbook?.is_collaborator;
+  const canAddRemoveRecipes = isOwnerOfSelectedCookbook || isCollaboratorOnSelectedCookbook; // Owner or collaborator can add/remove recipes
+  const canEditCookbook = isOwnerOfSelectedCookbook; // Only owner can edit cookbook details
+  const canDeleteCookbook = isOwnerOfSelectedCookbook; // Only owner can delete cookbook
+  const canManageCollaborators = isOwnerOfSelectedCookbook; // Only owner can manage collaborators
+  const canReorderRecipes = isOwnerOfSelectedCookbook || isCollaboratorOnSelectedCookbook; // Owner or collaborator can reorder
 
   const { data: dbRecipes, isLoading: isLoadingDbRecipes } = useQuery<Recipe[]>({
     queryKey: ['recipes', user?.id, currentSelectedCookbook?.id], // Key only depends on cookbook ID
@@ -645,14 +654,6 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   const handleDragCancel = () => {
     setActiveId(null);
   };
-
-  const canAddRemoveRecipes = isOwnerOfSelectedCookbook || isCollaboratorOnSelectedCookbook; // Owner or collaborator can add/remove recipes
-  const isOwnerOfSelectedCookbook = user && currentSelectedCookbook?.user_id === user.id;
-  const isCollaboratorOnSelectedCookbook = user && currentSelectedCookbook?.is_collaborator;
-  const canEditCookbook = isOwnerOfSelectedCookbook; // Only owner can edit cookbook details
-  const canDeleteCookbook = isOwnerOfSelectedCookbook; // Only owner can delete cookbook
-  const canManageCollaborators = isOwnerOfSelectedCookbook; // Only owner can manage collaborators
-  const canReorderRecipes = isOwnerOfSelectedCookbook || isCollaboratorOnSelectedCookbook; // Owner or collaborator can reorder
 
   return (
     <Card className="hover-lift bg-card/50 backdrop-blur-sm border-border/50">
