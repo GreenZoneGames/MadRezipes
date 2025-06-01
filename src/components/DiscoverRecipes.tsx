@@ -30,6 +30,7 @@ interface Recipe {
   meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string;
   cookbook_id?: string;
   is_public?: boolean; // Added to indicate if the parent cookbook is public
+  cookbook_owner_id?: string; // New: ID of the user who owns the cookbook
 }
 
 interface DiscoverRecipesProps {
@@ -46,16 +47,17 @@ const DiscoverRecipes: React.FC<DiscoverRecipesProps> = ({ onRecipeAdded }) => {
         .from('recipes')
         .select(`
           *,
-          cookbooks!inner(is_public)
+          cookbooks!inner(is_public, user_id)
         `)
         .eq('cookbooks.is_public', true); // Only fetch recipes from public cookbooks
 
       if (error) throw error;
 
-      // Map the data to include is_public directly on the recipe object
+      // Map the data to include is_public and cookbook_owner_id directly on the recipe object
       return data.map(recipe => ({
         ...recipe,
         is_public: recipe.cookbooks?.is_public || false,
+        cookbook_owner_id: recipe.cookbooks?.user_id || null,
       })) as Recipe[];
     },
   });

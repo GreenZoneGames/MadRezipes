@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { BookOpen, Plus, Trash2, Edit, Loader2, Save, Globe, Lock, Copy, CalendarDays, Printer, UserPlus, Check, X, Users } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Edit, Loader2, Save, Globe, Lock, CalendarDays, Printer, UserPlus, Check, X, Users } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
@@ -161,11 +161,12 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   const [editingCookbookIsPublic, setEditingCookbookIsPublic] = useState(false);
   const [isUpdatingCookbook, setIsUpdatingCookbook] = useState(false);
 
-  const [showCopyCookbookDialog, setShowCopyCookbookDialog] = useState(false);
-  const [cookbookToCopyId, setCookbookToCopyId] = useState('');
-  const [copiedCookbookName, setCopiedCookbookName] = useState('');
-  const [copiedCookbookIsPublic, setCopiedCookbookIsPublic] = useState(false);
-  const [isCopyingCookbook, setIsCopyingCookbook] = useState(false);
+  // Removed copy cookbook states
+  // const [showCopyCookbookDialog, setShowCopyCookbookDialog] = useState(false);
+  // const [cookbookToCopyId, setCookbookToCopyId] = useState('');
+  // const [copiedCookbookName, setCopiedCookbookName] = useState('');
+  // const [copiedCookbookIsPublic, setCopiedCookbookIsPublic] = useState(false);
+  // const [isCopyingCookbook, setIsCopyingCookbook] = useState(false);
 
   const [selectedCookbookIds, setSelectedCookbookIds] = useState<Set<string>>(new Set());
 
@@ -422,46 +423,47 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
     }
   };
 
-  const handleCopyCookbook = async () => {
-    if (!user) {
-      toast({
-        title: 'Sign In Required',
-        description: 'Please sign in to copy cookbooks.',
-        variant: 'destructive'
-      });
-      setShowAuthDialog(true);
-      return;
-    }
-    if (!cookbookToCopyId.trim()) {
-      toast({
-        title: 'Cookbook ID Required',
-        description: 'Please enter the ID of the cookbook you want to copy.',
-        variant: 'destructive'
-      });
-      return;
-    }
-    if (!copiedCookbookName.trim()) {
-      toast({
-        title: 'New Name Required',
-        description: 'Please enter a name for your new cookbook.',
-        variant: 'destructive'
-      });
-      return;
-    }
+  // Removed handleCopyCookbook function
+  // const handleCopyCookbook = async () => {
+  //   if (!user) {
+  //     toast({
+  //       title: 'Sign In Required',
+  //       description: 'Please sign in to copy cookbooks.',
+  //       variant: 'destructive'
+  //     });
+  //     setShowAuthDialog(true);
+  //     return;
+  //   }
+  //   if (!cookbookToCopyId.trim()) {
+  //     toast({
+  //       title: 'Cookbook ID Required',
+  //       description: 'Please enter the ID of the cookbook you want to copy.',
+  //       variant: 'destructive'
+  //     });
+  //     return;
+  //   }
+  //   if (!copiedCookbookName.trim()) {
+  //     toast({
+  //       title: 'New Name Required',
+  //       description: 'Please enter a name for your new cookbook.',
+  //       variant: 'destructive'
+  //     });
+  //     return;
+  //   }
 
-    setIsCopyingCookbook(true);
-    try {
-      await copyCookbook(cookbookToCopyId.trim(), copiedCookbookName.trim(), copiedCookbookIsPublic);
-      setCookbookToCopyId('');
-      setCopiedCookbookName('');
-      setCopiedCookbookIsPublic(false);
-      setShowCopyCookbookDialog(false);
-    } catch (error) {
-      // Toast handled by copyCookbook function in AppContext
-    } finally {
-      setIsCopyingCookbook(false);
-    }
-  };
+  //   setIsCopyingCookbook(true);
+  //   try {
+  //     await copyCookbook(cookbookToCopyId.trim(), copiedCookbookName.trim(), copiedCookbookIsPublic);
+  //     setCookbookToCopyId('');
+  //     setCopiedCookbookName('');
+  //     setCopiedCookbookIsPublic(false);
+  //     setShowCopyCookbookDialog(false);
+  //   } catch (error) {
+  //     // Toast handled by copyCookbook function in AppContext
+  //   } finally {
+  //     setIsCopyingCookbook(false);
+  //   }
+  // };
 
   const handleSaveToAccount = () => {
     if (!user) {
@@ -720,7 +722,8 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                 </div>
               </DialogContent>
             </Dialog>
-            {user && (
+            {/* Removed Copy Cookbook Dialog Trigger */}
+            {/* {user && (
               <Dialog open={showCopyCookbookDialog} onOpenChange={setShowCopyCookbookDialog}>
                 <DialogTrigger asChild>
                   <Button size="sm" variant="outline" className="text-purple-500 hover:text-purple-600 border-purple-300">
@@ -784,7 +787,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                   </div>
                 </DialogContent>
               </Dialog>
-            )}
+            )} */}
           </div>
         </CardTitle>
       </CardHeader>
@@ -859,7 +862,8 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                       {currentSelectedCookbook.is_public ? (
                         <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> Public</span>
                       ) : (
-                        <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private</span>
+                        <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private
+                        </span>
                       )}
                     </Badge>
                   )}

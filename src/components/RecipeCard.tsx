@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Users, ExternalLink, ChefHat, BookOpen, Plus, Share2, Printer, MessageSquare } from 'lucide-react';
+import { Clock, Users, ExternalLink, ChefHat, BookOpen, Plus, Share2, Printer, MessageSquare, Copy, Loader2, Globe, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -10,6 +10,8 @@ import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import QuickShareRecipe from './QuickShareRecipe'; // Import QuickShareRecipe
 import RecipeComments from './RecipeComments'; // Import RecipeComments
+import { Switch } from '@/components/ui/switch'; // Import Switch
+import { Label } from '@/components/ui/label'; // Import Label
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -34,6 +36,7 @@ interface Recipe {
   meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
   cookbook_id?: string; // Changed to snake_case
   is_public?: boolean; // Added to indicate if the parent cookbook is public
+  cookbook_owner_id?: string; // New: ID of the user who owns the cookbook
 }
 
 interface RecipeCardProps {
@@ -44,7 +47,7 @@ interface RecipeCardProps {
 }
 
 const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, onRecipeAdded, showFullDetails = false }) => {
-  const { user, cookbooks, guestCookbooks, createCookbook, addRecipeToCookbook } = useAppContext();
+  const { user, cookbooks, guestCookbooks, createCookbook, addRecipeToCookbook, copyCookbook } = useAppContext();
   const [showCookbookDialog, setShowCookbookDialog] = useState(false);
   const [selectedCookbookId, setSelectedCookbookId] = useState('');
   const [newCookbookName, setNewCookbookName] = useState('');
@@ -52,6 +55,11 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
   const [newCookbookIsPublic, setNewCookbookIsPublic] = useState(false); // Added for new cookbook
   const [creatingCookbook, setCreatingCookbook] = useState(false);
   const [addingRecipe, setAddingRecipe] = useState(false);
+
+  const [showCopyCookbookDialog, setShowCopyCookbookDialog] = useState(false);
+  const [copiedCookbookName, setCopiedCookbookName] = useState('');
+  const [copiedCookbookIsPublic, setCopiedCookbookIsPublic] = useState(false);
+  const [isCopyingCookbook, setIsCopyingCookbook] = useState(false);
 
   const allAvailableCookbooks = useMemo(() => {
     const combined = [...cookbooks, ...guestCookbooks];
@@ -230,6 +238,47 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
       toast({ title: 'Print Failed', description: 'Please allow pop-ups to print the recipe.', variant: 'destructive' });
     }
   };
+
+  const handleCopyCookbook = async () => {
+    if (!user) {
+      toast({
+        title: 'Sign In Required',
+        description: 'Please sign in to copy cookbooks.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    if (!recipe.cookbook_id) {
+      toast({
+        title: 'Error',
+        description: 'This recipe is not associated with a cookbook that can be copied.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    if (!copiedCookbookName.trim()) {
+      toast({
+        title: 'New Name Required',
+        description: 'Please enter a name for your new cookbook.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsCopyingCookbook(true);
+    try {
+      await copyCookbook(recipe.cookbook_id, copiedCookbookName.trim(), copiedCookbookIsPublic);
+      setCopiedCookbookName('');
+      setCopiedCookbookIsPublic(false);
+      setShowCopyCookbookDialog(false);
+    } catch (error) {
+      // Toast handled by copyCookbook function in AppContext
+    } finally {
+      setIsCopyingCookbook(false);
+    }
+  };
+
+  const canCopyCookbook = user && recipe.is_public && recipe.cookbook_id && recipe.cookbook_owner_id !== user.id;
 
   return (
     <Card className="hover-lift bg-card/50 backdrop-blur-sm border-border/50">
@@ -412,6 +461,69 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
             <Printer className="h-4 w-4" />
             Print
           </Button>
+          {canCopyCookbook && (
+            <Dialog open={showCopyCookbookDialog} onOpenChange={setShowCopyCookbookDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 flex items-center gap-1 text-purple-500 hover:text-purple-600 border-purple-300"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy Cookbook
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Copy className="h-5 w-5" />
+                    Copy Cookbook
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Copy "{recipe.title}"'s cookbook to your collection.
+                  </p>
+                  <Input
+                    placeholder="New name for your copy (e.g., 'My Italian Favorites')"
+                    value={copiedCookbookName}
+                    onChange={(e) => setCopiedCookbookName(e.target.value)}
+                    disabled={isCopyingCookbook}
+                  />
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="copied-cookbook-public"
+                      checked={copiedCookbookIsPublic}
+                      onCheckedChange={setCopiedCookbookIsPublic}
+                      disabled={isCopyingCookbook}
+                    />
+                    <Label htmlFor="copied-cookbook-public">
+                      {copiedCookbookIsPublic ? (
+                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Globe className="h-4 w-4" /> Make Public
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Lock className="h-4 w-4" /> Keep Private
+                        </span>
+                      )}
+                    </Label>
+                  </div>
+                  <Button onClick={handleCopyCookbook} disabled={isCopyingCookbook || !copiedCookbookName.trim()} className="w-full">
+                    {isCopyingCookbook ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Copying...
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4 mr-2" /> Copy Cookbook
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
         {/* Recipe Comments Section */}
         <div className="mt-6 pt-4 border-t border-border">
