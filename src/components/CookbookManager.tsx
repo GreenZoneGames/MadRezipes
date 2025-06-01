@@ -837,7 +837,20 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
             }}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Select a cookbook" />
+              <SelectValue>
+                {currentSelectedCookbook ? (
+                  <span className="flex items-center gap-2">
+                    {currentSelectedCookbook.is_public ? (
+                      <Globe className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    {currentSelectedCookbook.name}
+                  </span>
+                ) : (
+                  "Select a cookbook"
+                )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {uniqueCookbooks.map(cookbook => (
@@ -852,9 +865,59 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
           </Select>
 
           {uniqueCookbooks.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4 text-sm">
-              No cookbooks yet. Create your first one!
-            </p>
+            <div className="text-center py-4 text-sm space-y-2">
+              <p className="text-muted-foreground">No cookbooks yet. Create your first one!</p>
+              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+                <DialogTrigger asChild>
+                  <Button size="sm" className="bg-blue-500 hover:bg-blue-600">
+                    <Plus className="h-4 w-4 mr-1" />
+                    Create New Cookbook
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Create New Cookbook</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Cookbook name"
+                      value={newCookbookName}
+                      onChange={(e) => setNewCookbookName(e.target.value)}
+                      disabled={loading}
+                    />
+                    <Textarea
+                      placeholder="Description (optional)"
+                      value={newCookbookDescription}
+                      onChange={(e) => setNewCookbookDescription(e.target.value)}
+                      disabled={loading}
+                      rows={3}
+                    />
+                    <div className="flex items-center space-x-2">
+                      <Switch
+                        id="new-cookbook-public-dialog"
+                        checked={newCookbookIsPublic}
+                        onCheckedChange={setNewCookbookIsPublic}
+                        disabled={loading}
+                      />
+                      <Label htmlFor="new-cookbook-public-dialog">
+                        {newCookbookIsPublic ? (
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Globe className="h-4 w-4" /> Public
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Lock className="h-4 w-4" /> Private
+                          </span>
+                        )}
+                      </Label>
+                    </div>
+                    <Button onClick={handleCreateCookbook} disabled={loading} className="w-full">
+                      {loading ? 'Creating...' : 'Create Cookbook'}
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           ) : (
             <div className="space-y-2">
               <div className="flex items-center justify-between mt-4">
@@ -1063,7 +1126,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
               <Textarea
                 placeholder="Description (optional)"
                 value={editingCookbookDescription}
-                onChange={(e) => setNewCookbookDescription(e.target.value)}
+                onChange={(e) => setEditingCookbookDescription(e.target.value)}
                 disabled={isUpdatingCookbook}
                 rows={3}
               />
