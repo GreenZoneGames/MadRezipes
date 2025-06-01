@@ -30,19 +30,30 @@ interface AppLayoutProps {
   children: React.ReactNode;
   onRecipeRemoved: (id: string) => void;
   setActiveTab: (tab: string) => void;
-  onOpenDm: (recipientId: string, recipientUsername: string) => void; // New prop
+  onOpenDm: (recipientId: string, recipientUsername: string) => void;
+  recipes: Recipe[]; // Added
+  mealPlan: MealPlan[]; // Added
+  onShoppingListChange: (ingredients: string[]) => void; // Added
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setActiveTab, onOpenDm }) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setActiveTab, onOpenDm, recipes, mealPlan, onShoppingListChange }) => {
   const { sidebarOpen, toggleSidebar } = useAppContext();
   const isMobile = useIsMobile();
-  const [recipes, setRecipes] = useState<Recipe[]>([]); // This state will now primarily hold scraped/generated recipes before DB save, and then be updated by DB changes.
-  const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
+  const [localRecipes, setLocalRecipes] = useState<Recipe[]>(recipes); // Renamed to avoid prop drilling issues
+  const [localMealPlan, setLocalMealPlan] = useState<MealPlan[]>(mealPlan); // Renamed
   const [shoppingList, setShoppingList] = useState<string[]>([]);
 
+  // Sync props to local state if they change from parent (Index.tsx)
+  React.useEffect(() => {
+    setLocalRecipes(recipes);
+  }, [recipes]);
+
+  React.useEffect(() => {
+    setLocalMealPlan(mealPlan);
+  }, [mealPlan]);
+
   const handleRecipeAdded = (recipe: Recipe) => {
-    setRecipes(prev => {
-      // Prevent adding duplicates if recipe already exists by ID
+    setLocalRecipes(prev => {
       if (prev.some(r => r.id === recipe.id)) {
         return prev;
       }
@@ -54,26 +65,22 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
     });
   };
 
-  // This function is now primarily called by CookbookManager after DB deletion
-  // It's passed down from Index.tsx to AppLayout, then to TopBar, and finally to MyCookbooksDialog and CookbookManager.
-  // It updates the local 'recipes' state in Index.tsx to reflect removals.
-  // The actual DB deletion is handled within AppContext and CookbookManager.
-  // The prop is named `onRecipeRemoved` to avoid confusion with `removeRecipe` which would imply DB interaction here.
-  // The `onRecipeRemoved` prop is now passed from Index.tsx to AppLayout, then to TopBar, and finally to MyCookbooksDialog.
-  // This ensures that when a recipe is removed via the CookbookManager dialog, the main `recipes` state in Index.tsx is updated.
-
   const handleMealPlanChange = (newMealPlan: MealPlan[]) => {
-    setMealPlan(newMealPlan);
+    setLocalMealPlan(newMealPlan);
+    // Also call the parent's handler if needed
+    // onMealPlanChange(newMealPlan); // If Index.tsx needs to know about this change
   };
 
-  const handleShoppingListChange = (newShoppingList: string[]) => {
+  const handleLocalShoppingListChange = (newShoppingList: string[]) => {
     setShoppingList(newShoppingList);
+    onShoppingListChange(newShoppingList); // Pass up to Index.tsx
   };
 
   const addToShoppingList = (ingredients: string[]) => {
     const newItems = ingredients.filter(item => !shoppingList.includes(item));
     if (newItems.length > 0) {
       setShoppingList(prev => [...prev, ...newItems]);
+      onShoppingListChange([...shoppingList, ...newItems]); // Update parent's state
       toast({
         title: '🛒 Added to Shopping List',
         description: `${newItems.length} ingredient(s) added to your shopping list.`
@@ -82,7 +89,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
   };
 
   const handleRecipeGenerated = (recipe: Recipe) => {
-    setRecipes(prev => [...prev, recipe]);
+    setLocalRecipes(prev => [...prev, recipe]);
   };
 
   return (
@@ -110,12 +117,15 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
               <div className={`text-white/90 font-medium drop-shadow-md ${
                 isMobile ? 'text-xs' : 'text-sm'
               }`}>
-                {recipes.length} recipes • {mealPlan.length} meals
+                {localRecipes.length} recipes • {localMealPlan.length} meals
               </div>
               <TopBar 
                 onRecipeRemoved={onRecipeRemoved} 
                 setActiveTab={setActiveTab} 
-                onOpenDm={onOpenDm} // Pass onOpenDm here
+                onOpenDm={onOpenDm}
+                recipes={localRecipes} // Pass local state
+                mealPlan={localMealPlan} // Pass local state
+                onShoppingListChange={handleLocalShoppingListChange} // Pass local handler
               />
             </div>
           </div>
@@ -133,19 +143,19 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
             
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-foreground">Your Recipe Collection</h2>
-              {recipes.length === 0 ? (
+              {localRecipes.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground animate-fade-in">
                   <p>No recipes yet. Start by scraping recipes from a URL!</p>
                   <p className="text-sm mt-2">Enter a recipe URL above to extract the exact recipe details.</p>
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {recipes.map(recipe => (
+                  {localRecipes.map(recipe => (
                     <RecipeCard
                       key={recipe.id}
                       recipe={recipe}
                       onAddToShoppingList={addToShoppingList}
-                      onRecipeAdded={handleRecipeAdded} // Pass this to allow adding from RecipeCard
+                      onRecipeAdded={handleRecipeAdded}
                     />
                   ))}
                 </div>
@@ -156,20 +166,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
           <div className={`space-y-6 ${
             isMobile ? 'order-2' : ''
           }`}>
-            {/* CookbookManager is now rendered inside MyCookbooksDialog, which is in TopBar */}
-            {/* FriendsList is now rendered inside FriendsDialog, which is in TopBar */}
-            <ShoppingList 
-              recipes={recipes} 
-              onShoppingListChange={handleShoppingListChange}
-              mealPlan={mealPlan}
-            />
+            {/* ShoppingList is now rendered via dialog */}
             <MealPlanner 
-              recipes={recipes} 
+              recipes={localRecipes} 
               onMealPlanChange={handleMealPlanChange}
               availableIngredients={shoppingList}
               onRecipeGenerated={handleRecipeGenerated}
             />
-            <MealExporter recipes={recipes} mealPlan={mealPlan} />
+            <MealExporter recipes={localRecipes} mealPlan={localMealPlan} />
           </div>
         </div>
       </main>

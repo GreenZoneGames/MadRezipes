@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, MessageCircle, BookOpen, Users } from 'lucide-react';
+import { User, LogIn, MessageCircle, BookOpen, Users, ShoppingCart } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -9,23 +9,28 @@ import MessageInbox from './MessageInbox';
 import UserAuth from './UserAuth';
 import UserProfileDialog from './UserProfileDialog';
 import MyCookbooksDialog from './MyCookbooksDialog';
-import FriendsDialog from './FriendsDialog'; // Import the new dialog
+import FriendsDialog from './FriendsDialog';
+import ShoppingListDialog from './ShoppingListDialog'; // Import the new dialog
 import { cn } from '@/lib/utils';
 
 interface TopBarProps {
   onRecipeRemoved: (id: string) => void;
   setActiveTab: (tab: string) => void;
-  onOpenDm: (recipientId: string, recipientUsername: string) => void; // New prop
+  onOpenDm: (recipientId: string, recipientUsername: string) => void;
+  recipes: any[]; // Added for ShoppingListDialog
+  mealPlan: any[]; // Added for ShoppingListDialog
+  onShoppingListChange: (ingredients: string[]) => void; // Added for ShoppingListDialog
 }
 
-const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm }) => {
+const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm, recipes, mealPlan, onShoppingListChange }) => {
   const { user } = useAppContext();
   const isMobile = useIsMobile();
   const [showAuth, setShowAuth] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showCookbooksDialog, setShowCookbooksDialog] = useState(false);
-  const [showFriendsDialog, setShowFriendsDialog] = useState(false); // New state for friends dialog
+  const [showFriendsDialog, setShowFriendsDialog] = useState(false);
+  const [showShoppingListDialog, setShowShoppingListDialog] = useState(false); // New state for shopping list dialog
   const [hasShownLoginToast, setHasShownLoginToast] = useState(false);
 
   useEffect(() => {
@@ -60,9 +65,15 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm
     setShowCookbooksDialog(true);
   };
 
-  const handleFriendsClick = () => { // New handler for friends dialog
+  const handleFriendsClick = () => {
     setShowFriendsDialog(true);
   };
+
+  const handleShoppingListClick = () => { // New handler for shopping list dialog
+    setShowShoppingListDialog(true);
+  };
+
+  const iconButtonClasses = "text-white hover:text-white hover:bg-white/10 border border-white/20 hover:border-white/40";
 
   return (
     <div className="flex items-center gap-3">
@@ -71,9 +82,7 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm
         variant="ghost"
         size="sm"
         onClick={handleMessageClick}
-        className={cn(
-          "text-white hover:text-white hover:bg-white/10 transition-all duration-500 ease-in-out",
-        )}
+        className={cn(iconButtonClasses)}
       >
         <MessageCircle className="h-4 w-4" />
         {!isMobile && <span className="ml-1">Messages</span>}
@@ -84,7 +93,7 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm
         variant="ghost"
         size="sm"
         onClick={handleCookbooksClick}
-        className="text-white hover:text-white hover:bg-white/10 border border-white/20 hover:border-white/40"
+        className={cn(iconButtonClasses)}
       >
         <BookOpen className="h-4 w-4" />
         {!isMobile && <span className="ml-1">Cookbooks</span>}
@@ -95,10 +104,21 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm
         variant="ghost"
         size="sm"
         onClick={handleFriendsClick}
-        className="text-white hover:text-white hover:bg-white/10 border border-white/20 hover:border-white/40"
+        className={cn(iconButtonClasses)}
       >
         <Users className="h-4 w-4" />
         {!isMobile && <span className="ml-1">Friends</span>}
+      </Button>
+
+      {/* Shopping List Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleShoppingListClick}
+        className={cn(iconButtonClasses)}
+      >
+        <ShoppingCart className="h-4 w-4" />
+        {!isMobile && <span className="ml-1">List</span>}
       </Button>
 
       {/* User Profile / Sign In Button */}
@@ -111,7 +131,7 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm
             variant="ghost" 
             size="sm" 
             onClick={() => setShowProfile(true)}
-            className="text-white hover:text-white hover:bg-white/10 border border-white/20"
+            className={cn(iconButtonClasses)}
           >
             <User className="h-4 w-4" />
             {!isMobile && <span className="ml-1">{displayName}</span>}
@@ -122,10 +142,7 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm
           variant="ghost" 
           size="sm" 
           onClick={() => setShowAuth(true)}
-          className={cn(
-            "text-white hover:text-white hover:bg-white/10 border border-white/20 transition-all duration-500 ease-in-out",
-            "opacity-100 translate-x-0"
-          )}
+          className={cn(iconButtonClasses)}
         >
           <LogIn className="h-4 w-4" />
           {!isMobile && <span className="ml-1">Sign In</span>}
@@ -145,6 +162,13 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm
         open={showFriendsDialog} 
         onOpenChange={setShowFriendsDialog} 
         onOpenDm={onOpenDm} 
+      />
+      <ShoppingListDialog
+        open={showShoppingListDialog}
+        onOpenChange={setShowShoppingListDialog}
+        recipes={recipes}
+        mealPlan={mealPlan}
+        onShoppingListChange={onShoppingListChange}
       />
     </div>
   );

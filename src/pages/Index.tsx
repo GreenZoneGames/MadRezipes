@@ -99,7 +99,10 @@ const Index = () => {
       <AppLayout 
         onRecipeRemoved={handleRecipeRemoved} 
         setActiveTab={setActiveTab}
-        onOpenDm={handleOpenDm} // Pass onOpenDm here
+        onOpenDm={handleOpenDm}
+        recipes={recipes} // Pass recipes to AppLayout
+        mealPlan={mealPlan} // Pass mealPlan to AppLayout
+        onShoppingListChange={handleShoppingListChange} // Pass onShoppingListChange to AppLayout
       >
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50">
           <div className="container mx-auto p-6 space-y-8">
@@ -113,7 +116,7 @@ const Index = () => {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3"> {/* Adjusted grid columns */}
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="planner">Meal Planner</TabsTrigger>
                 <TabsTrigger value="add-recipe">Add Recipe</TabsTrigger>
                 <TabsTrigger value="discover">Discover</TabsTrigger>
@@ -134,11 +137,7 @@ const Index = () => {
                   </div>
                   
                   <div className="space-y-6"> {/* Right Column */}
-                    <ShoppingList 
-                      recipes={recipes} 
-                      onShoppingListChange={handleShoppingListChange}
-                      mealPlan={mealPlan}
-                    />
+                    {/* ShoppingList is now in a dialog */}
                     <ShoppingListPDF 
                       mealPlan={mealPlan}
                       selectedMonth={selectedMonth}
@@ -151,8 +150,6 @@ const Index = () => {
                   </div>
                 </div>
               </TabsContent>
-              
-              {/* Removed 'community' tab content */}
               
               <TabsContent value="add-recipe">
                 <ManualRecipeForm onRecipeAdded={handleRecipeAdded} />
