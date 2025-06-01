@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import * as React from 'react'; // Changed import style
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import RecipeCard from './RecipeCard';
@@ -69,7 +69,7 @@ const SortableCollectionRecipeItem: React.FC<SortableCollectionRecipeItemProps> 
         onAddToShoppingList={onAddToShoppingList}
         onRecipeAdded={onRecipeAdded}
         showFullDetails={false} // Keep condensed view for collection
-        onRemove={onRemove} {/* Pass onRemove to RecipeCard */}
+        onRemove={onRemove} // Removed JSX comment
       />
     </div>
   );
