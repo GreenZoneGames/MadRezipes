@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, BookOpen, Plus, Share2, Printer, Copy, Loader2, Twitter, Facebook } from 'lucide-react';
+import { ExternalLink, BookOpen, Plus, Share2, Printer, Copy, Loader2, Twitter, Facebook, Trash2 } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import QuickShareRecipe from '../QuickShareRecipe';
@@ -12,6 +12,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Recipe {
   id: string;
@@ -32,9 +43,10 @@ interface RecipeActionsProps {
   recipe: Recipe;
   onAddToShoppingList?: (ingredients: string[]) => void;
   onRecipeAdded?: (recipe: Recipe) => void;
+  onRemove?: (recipeId: string, cookbookId?: string) => void; // New prop for removal
 }
 
-const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingList, onRecipeAdded }) => {
+const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingList, onRecipeAdded, onRemove }) => {
   const { user } = useAppContext();
   const [showAddCookbookDialog, setShowAddCookbookDialog] = useState(false);
   const [showCopyCookbookDialog, setShowCopyCookbookDialog] = useState(false);
@@ -147,7 +159,11 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
     toast({ title: 'Sharing on Facebook', description: 'Opening Facebook to share your recipe.' });
   };
 
-  // Removed handleSharePinterest as the icon is not available
+  const handleRemoveClick = () => {
+    if (onRemove) {
+      onRemove(recipe.id, recipe.cookbook_id);
+    }
+  };
 
   const canCopyCookbook = user && recipe.is_public && recipe.cookbook_id && recipe.cookbook_owner_id !== user.id;
 
@@ -228,6 +244,35 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
           <Copy className="h-4 w-4" />
           Copy Cookbook
         </Button>
+      )}
+      {onRemove && (
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="flex-1 flex items-center gap-1"
+            >
+              <Trash2 className="h-4 w-4" />
+              Remove
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure you want to remove this recipe?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action cannot be undone. This will permanently remove "{recipe.title}" from your collection.
+                {recipe.cookbook_id && user && <p className="mt-2 font-medium">This recipe is also in a cookbook. It will be removed from there too.</p>}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleRemoveClick} className="bg-destructive hover:bg-destructive/90">
+                Remove Recipe
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
 
       <AddRecipeToCookbookDialog

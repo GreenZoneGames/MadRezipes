@@ -102,6 +102,7 @@ interface AppContextType {
   updateUserProfile: (updates: Partial<User>) => Promise<void>; // New
   updateCookbookPrivacy: (cookbookId: string, isPublic: boolean) => Promise<void>; // New
   deleteCookbook: (cookbookId: string) => Promise<void>; // New
+  deleteRecipe: (recipeId: string, cookbookId?: string) => Promise<void>; // New: Delete single recipe
   copyCookbook: (cookbookId: string, newName: string, isPublic: boolean) => Promise<void>; // New
   addFriend: (email: string) => Promise<void>;
   removeFriend: (friendId: string) => Promise<void>;
@@ -140,6 +141,7 @@ const defaultAppContext: AppContextType = {
   updateUserProfile: async () => {}, // Dummy
   updateCookbookPrivacy: async () => {}, // Dummy
   deleteCookbook: async () => {}, // Dummy
+  deleteRecipe: async () => {}, // Dummy
   copyCookbook: async () => {}, // Dummy
   addFriend: async () => {},
   removeFriend: async () => {},
@@ -720,6 +722,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       queryClient.invalidateQueries({ queryKey: ['recipes', user.id, cookbookId] }); // Invalidate recipes for this cookbook
     } catch (error) {
       console.error('Delete cookbook error:', error);
+      throw error;
+    }
+  };
+
+  const deleteRecipe = async (recipeId: string, cookbookId?: string) => {
+    if (!user) {
+      // Guest mode: remove from local storage
+      setGuestRecipes(prev => prev.filter(recipe => recipe.id !== recipeId));
+      toast({ title: 'Recipe Removed', description: 'Recipe removed from your temporary collection.' });
+      return;
+    }
+
+    try {
+      // Determine the user_id associated with the recipe's cookbook
+      let ownerId = user.id; // Assume current user is owner by default
+      if (cookbookId) {
+        const { data: cookbookData, error: cookbookError } = await supabase
+          .from('cookbooks')
+          .select('user_id')
+          .eq('id', cookbookId)
+          .single();
+        
+        if (cookbookError || !cookbookData) {
+          throw new Error('Cookbook not found or inaccessible.');
+        }
+        ownerId = cookbookData.user_id;
+      }
+
+      const { error } = await supabase
+        .from('recipes')
+        .delete()
+        .eq('id', recipeId)
+        .eq('user_id', ownerId); // Ensure deletion is by the recipe owner
+
+      if (error) throw error;
+      toast({ title: 'Recipe Removed', description: 'Recipe successfully removed.' });
+      queryClient.invalidateQueries({ queryKey: ['recipes', ownerId, cookbookId] }); // Invalidate specific cookbook recipes
+      queryClient.invalidateQueries({ queryKey: ['userRecipes', user.id] }); // Invalidate user's overall recipes
+    } catch (error: any) {
+      console.error('Delete recipe error:', error);
+      toast({ title: 'Failed to Remove Recipe', description: error.message, variant: 'destructive' });
       throw error;
     }
   };
@@ -1408,6 +1451,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateUserProfile,
         updateCookbookPrivacy,
         deleteCookbook,
+        deleteRecipe, // Added
         copyCookbook,
         addFriend,
         removeFriend,

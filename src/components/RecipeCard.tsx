@@ -38,9 +38,10 @@ interface RecipeCardProps {
   onAddToShoppingList?: (ingredients: string[]) => void;
   onRecipeAdded?: (recipe: Recipe) => void;
   showFullDetails?: boolean;
+  onRemove?: (recipeId: string, cookbookId?: string) => void; // New prop
 }
 
-const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, onRecipeAdded, showFullDetails = false }) => {
+const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, onRecipeAdded, showFullDetails = false, onRemove }) => {
   return (
     <Card className="hover-lift bg-card/50 backdrop-blur-sm border-border/50">
       <CardHeader className="pb-3">
@@ -67,6 +68,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
           recipe={recipe}
           onAddToShoppingList={onAddToShoppingList}
           onRecipeAdded={onRecipeAdded}
+          onRemove={onRemove} {/* Pass onRemove to RecipeActions */}
         />
 
         {/* Recipe Comments Section */}

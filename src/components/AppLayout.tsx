@@ -53,7 +53,7 @@ interface AppLayoutProps {
   recipes: Recipe[]; // Added
   mealPlan: MealPlan[]; // Added
   onShoppingListChange: (ingredients: string[]) => void; // Added
-  onMealPlanChange: (mealPlan: MealPlan[]) => void; // Added
+  onMealPlanChange: (mealPlan: Meal[]) => void; // Added
   availableIngredients: string[]; // Added
   onRecipeGenerated: (recipe: Recipe) => void; // Added
   selectedMonth: string; // Added
@@ -74,7 +74,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   selectedMonth,
   setSelectedMonth,
 }) => {
-  const { sidebarOpen, toggleSidebar } = useAppContext();
+  const { sidebarOpen, toggleSidebar, deleteRecipe } = useAppContext(); // Destructure deleteRecipe
   const isMobile = useIsMobile();
   const [localRecipes, setLocalRecipes] = useState<Recipe[]>(recipes); // Renamed to avoid prop drilling issues
   const [localMealPlan, setLocalMealPlan] = useState<MealPlan[]>(mealPlan); // Renamed
@@ -107,10 +107,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
       }
       return [...prev, recipe];
     });
-    toast({
-      title: '🍽️ Recipe Added!',
-      description: `${recipe.title} has been added to your collection.`
-    });
+    // Toast is now handled by RecipeScraper directly for automatic adds
   };
 
   const handleLocalMealPlanChange = (newMealPlan: MealPlan[]) => {
@@ -138,6 +135,23 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   const handleRecipeGenerated = (recipe: Recipe) => {
     setLocalRecipes(prev => [...prev, recipe]);
     onRecipeGenerated(recipe); // Pass up to Index.tsx
+  };
+
+  const handleRemoveRecipeFromCollection = async (recipeId: string, cookbookId?: string) => {
+    try {
+      // Attempt to delete from Supabase if it has a cookbook_id
+      if (cookbookId) {
+        await deleteRecipe(recipeId, cookbookId);
+      } else {
+        // If no cookbook_id, it's likely a temporary/guest recipe, remove locally
+        toast({ title: 'Recipe Removed', description: 'Recipe removed from your collection.' });
+      }
+      // Always update local state regardless of Supabase success/failure
+      setLocalRecipes(prev => prev.filter(r => r.id !== recipeId));
+      onRecipeRemoved(recipeId); // Notify parent (Index.tsx)
+    } catch (error) {
+      // Toast is already handled by deleteRecipe in AppContext
+    }
   };
 
   const handleDragEnd = (event: any) => {
@@ -258,6 +272,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                           recipe={recipe}
                           onAddToShoppingList={addToShoppingList}
                           onRecipeAdded={handleRecipeAdded}
+                          onRemove={handleRemoveRecipeFromCollection} // Pass the remove handler
                         />
                       ))}
                     </div>
