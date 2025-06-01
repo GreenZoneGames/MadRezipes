@@ -147,21 +147,7 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
     }
   };
 
-  const handleDeleteCookbook = async (cookbookId: string, cookbookName: string) => {
-    try {
-      await deleteCookbook(cookbookId);
-      toast({
-        title: 'Cookbook Deleted!',
-        description: `"${cookbookName}" and all its recipes have been removed.`
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Deletion Failed',
-        description: error.message || 'An error occurred while deleting the cookbook.',
-        variant: 'destructive'
-      });
-    }
-  };
+  // Removed handleDeleteCookbook from here. It should be managed in CookbookManager/CookbookDetailsDialog.
 
   if (!user) {
     return null;
@@ -242,30 +228,7 @@ const UserProfileDialog: React.FC<UserProfileDialogProps> = ({ open, onOpenChang
                             checked={cb.is_public}
                             onCheckedChange={(checked) => handleCookbookPrivacyChange(cb.id, checked)}
                           />
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  This action cannot be undone. This will permanently delete the cookbook "{cb.name}" and all recipes within it.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction 
-                                  onClick={() => handleDeleteCookbook(cb.id, cb.name)}
-                                  className="bg-destructive hover:bg-destructive/90"
-                                >
-                                  Delete Cookbook
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          {/* Removed AlertDialog for deleting cookbook from here */}
                         </div>
                       </div>
                     ))}

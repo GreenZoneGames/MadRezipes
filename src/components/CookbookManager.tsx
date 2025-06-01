@@ -46,6 +46,8 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { arrayMove } from '@/utils/array-utils';
 
+import CookbookDetailsDialog from './CookbookDetailsDialog'; // Import the new dialog
+
 interface CategorizedIngredients {
   proteins: string[];
   vegetables: string[];
@@ -97,7 +99,7 @@ interface CookbookManagerProps {
   setActiveTab: (tab: string) => void;
 }
 
-// Sortable Item Component
+// Sortable Item Component (kept for potential future use or if DND is needed elsewhere)
 const SortableRecipeItem: React.FC<{ recipe: Recipe; onClick: (recipe: Recipe) => void; onRemove: (id: string) => void; canRemove: boolean }> = ({ recipe, onClick, onRemove, canRemove }) => {
   const {
     attributes,
@@ -152,96 +154,15 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   const [newCookbookIsPublic, setNewCookbookIsPublic] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const [showRecipeDetailsDialog, setShowRecipeDetailsDialog] = useState(false);
-  const [selectedRecipeForDetails, setSelectedRecipeForDetails] = useState<Recipe | null>(null);
-  const [showEditCookbookDialog, setShowEditCookbookDialog] = useState(false);
-  const [editingCookbook, setEditingCookbook] = useState<Cookbook | null>(null);
-  const [editingCookbookName, setEditingCookbookName] = useState('');
-  const [editingCookbookDescription, setEditingCookbookDescription] = useState('');
-  const [editingCookbookIsPublic, setEditingCookbookIsPublic] = useState(false);
-  const [isUpdatingCookbook, setIsUpdatingCookbook] = useState(false);
-
   const [selectedCookbookIds, setSelectedCookbookIds] = useState<Set<string>>(new Set());
 
-  const [showInviteCollaboratorDialog, setShowInviteCollaboratorDialog] = useState(false);
-  const [collaboratorEmail, setCollaboratorEmail] = useState('');
-  const [isInvitingCollaborator, setIsInvitingCollaborator] = useState(false);
-
-  const [showManageCollaboratorsDialog, setShowManageCollaboratorsDialog] = useState(false);
-  const [cookbookToManageCollaborators, setCookbookToManageCollaborators] = useState<Cookbook | null>(null);
-
-  const [showManageRecipesDialog, setShowManageRecipesDialog] = useState(false);
-
-  // DND state
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor),
-  );
+  const [showCookbookDetailsDialog, setShowCookbookDetailsDialog] = useState(false); // New state for CookbookDetailsDialog
 
   const uniqueCookbooks = Array.from(new Map(
     (user ? cookbooks : guestCookbooks).map(cb => [cb.id, cb])
   ).values());
 
   const currentSelectedCookbook = selectedCookbook || (uniqueCookbooks.length > 0 ? uniqueCookbooks[0] : null);
-
-  // Define permission variables here, after currentSelectedCookbook is determined
-  const isOwnerOfSelectedCookbook = user && currentSelectedCookbook?.user_id === user.id;
-  const isCollaboratorOnSelectedCookbook = user && currentSelectedCookbook?.is_collaborator;
-  const canAddRemoveRecipes = isOwnerOfSelectedCookbook || isCollaboratorOnSelectedCookbook; // Owner or collaborator can add/remove recipes
-  const canEditCookbook = isOwnerOfSelectedCookbook; // Only owner can edit cookbook details
-  const canDeleteCookbook = isOwnerOfSelectedCookbook; // Only owner can delete cookbook
-  const canManageCollaborators = isOwnerOfSelectedCookbook; // Only owner can manage collaborators
-  const canReorderRecipes = isOwnerOfSelectedCookbook || isCollaboratorOnSelectedCookbook; // Owner or collaborator can reorder
-
-  const { data: dbRecipes, isLoading: isLoadingDbRecipes } = useQuery<Recipe[]>({
-    queryKey: ['recipes', user?.id, currentSelectedCookbook?.id], // Key only depends on cookbook ID
-    queryFn: async () => {
-      if (!user || !currentSelectedCookbook || currentSelectedCookbook.user_id === 'guest') return [];
-      
-      // If the user is the owner, fetch their recipes for this cookbook
-      // If the user is a collaborator, fetch recipes owned by the cookbook owner for this cookbook
-      const ownerId = currentSelectedCookbook.user_id;
-
-      const { data, error } = await supabase
-        .from('recipes')
-        .select('*')
-        .eq('user_id', ownerId) // Fetch recipes owned by the cookbook owner
-        .eq('cookbook_id', currentSelectedCookbook.id)
-        .order('position', { ascending: true }); // Order by position
-      
-      if (error) throw error;
-      return data || [];
-    },
-    enabled: !!currentSelectedCookbook && currentSelectedCookbook.user_id !== 'guest',
-  });
-
-  const guestRecipesForSelectedCookbook = currentSelectedCookbook && currentSelectedCookbook.user_id === 'guest'
-    ? guestRecipes.filter(recipe => recipe.cookbook_id === currentSelectedCookbook.id).sort((a, b) => (a.position || 0) - (b.position || 0))
-    : [];
-
-  const [recipesToDisplay, setRecipesToDisplay] = useState<Recipe[]>([]);
-
-  // Effect 1: Populate form data when dialog opens or user data changes
-  useEffect(() => {
-    if (showEditCookbookDialog && editingCookbook) {
-      setEditingCookbookName(editingCookbook.name);
-      setEditingCookbookDescription(editingCookbook.description || '');
-      setEditingCookbookIsPublic(editingCookbook.is_public);
-    }
-  }, [showEditCookbookDialog, editingCookbook]);
-
-  // Effect 2: Sync recipes from query/guest state to local state for DND
-  useEffect(() => {
-    if (user && currentSelectedCookbook?.user_id !== 'guest') {
-      setRecipesToDisplay(dbRecipes || []);
-    } else if (currentSelectedCookbook?.user_id === 'guest') {
-      setRecipesToDisplay(guestRecipesForSelectedCookbook);
-    } else {
-      setRecipesToDisplay([]);
-    }
-  }, [dbRecipes, guestRecipesForSelectedCookbook, user, currentSelectedCookbook]);
-
 
   const handleCreateCookbook = async () => {
     if (!newCookbookName.trim()) {
@@ -267,111 +188,6 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
       console.error('Creation Failed:', error.message);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleEditCookbook = (cookbook: Cookbook) => {
-    setEditingCookbook(cookbook);
-    setShowEditCookbookDialog(true);
-  };
-
-  const handleUpdateCookbook = async () => {
-    if (!editingCookbook || !user) return;
-    if (!editingCookbookName.trim()) {
-      toast({
-        title: 'Name Required',
-        description: 'Please enter a cookbook name.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    setIsUpdatingCookbook(true);
-    try {
-      const { error } = await supabase
-        .from('cookbooks')
-        .update({ 
-          name: editingCookbookName.trim(), 
-          description: editingCookbookDescription.trim(),
-          is_public: editingCookbookIsPublic
-        })
-        .eq('id', editingCookbook.id)
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
-
-      toast({
-        title: 'Cookbook Updated!',
-        description: `"${editingCookbookName}" has been updated.`
-      });
-      setShowEditCookbookDialog(false);
-      setEditingCookbook(null);
-      queryClient.invalidateQueries({ queryKey: ['cookbooks', user.id] });
-    } catch (error: any) {
-      toast({
-        title: 'Update Failed',
-        description: error.message || 'Failed to update cookbook.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsUpdatingCookbook(false);
-    }
-  };
-
-  const handleRemoveRecipe = async (recipeId: string) => {
-    if (!currentSelectedCookbook) return;
-
-    if (currentSelectedCookbook.user_id === 'guest') {
-      setGuestRecipes(prev => prev.filter(recipe => recipe.id !== recipeId));
-      toast({
-        title: 'Recipe Removed',
-        description: 'Recipe has been removed from this temporary cookbook.'
-      });
-      onRecipeRemoved(recipeId);
-      return;
-    }
-    
-    try {
-      // Check if user is owner or collaborator
-      const isOwner = currentSelectedCookbook?.user_id === user?.id;
-      const { data: collaboratorStatus } = await supabase
-        .from('cookbook_collaborators')
-        .select('status')
-        .eq('cookbook_id', currentSelectedCookbook?.id)
-        .eq('user_id', user?.id)
-        .single();
-      const isAcceptedCollaborator = collaboratorStatus?.status === 'accepted';
-
-      if (!isOwner && !isAcceptedCollaborator) {
-        toast({
-          title: 'Permission Denied',
-          description: 'You do not have permission to remove recipes from this cookbook.',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      const { error } = await supabase
-        .from('recipes')
-        .delete()
-        .eq('id', recipeId)
-        .eq('cookbook_id', currentSelectedCookbook?.id)
-        .eq('user_id', currentSelectedCookbook?.user_id); // Ensure we delete the recipe owned by the cookbook owner
-      
-      if (error) throw error;
-      
-      toast({
-        title: 'Recipe Removed',
-        description: 'Recipe has been removed from this cookbook.'
-      });
-      queryClient.invalidateQueries({ queryKey: ['recipes', currentSelectedCookbook?.id] });
-      onRecipeRemoved(recipeId);
-    } catch (error: any) {
-      toast({
-        title: 'Removal Failed',
-        description: error.message || 'Failed to remove recipe.',
-        variant: 'destructive'
-      });
     }
   };
 
@@ -428,11 +244,6 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
     setShowAuthDialog(false);
   };
 
-  const handleViewRecipeDetails = (recipe: Recipe) => {
-    setSelectedRecipeForDetails(recipe);
-    setShowRecipeDetailsDialog(true);
-  };
-
   const toggleCookbookSelection = (cookbookId: string) => {
     setSelectedCookbookIds(prev => {
       const newSet = new Set(prev);
@@ -453,161 +264,16 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
     }
   };
 
-  const handlePlanWithCookbook = () => {
+  const handleOpenCookbookDetails = () => {
     if (currentSelectedCookbook) {
-      setSelectedCookbook(currentSelectedCookbook);
-      if (typeof setActiveTab === 'function') {
-        setActiveTab('planner');
-        toast({
-          title: 'Switched to Meal Planner',
-          description: `Now planning meals with "${currentSelectedCookbook.name}".`
-        });
-      } else {
-        console.error('setActiveTab is not a function, cannot switch tab.');
-        toast({
-          title: 'Error',
-          description: 'Could not switch to Meal Planner tab. Please try refreshing the page.',
-          variant: 'destructive'
-        });
-      }
+      setShowCookbookDetailsDialog(true);
     } else {
       toast({
         title: 'No Cookbook Selected',
-        description: 'Please select a cookbook to plan meals with.',
+        description: 'Please select a cookbook to open its details.',
         variant: 'destructive'
       });
     }
-  };
-
-  const handleExportCookbookRecipes = async () => {
-    if (!currentSelectedCookbook) {
-      toast({
-        title: 'No Cookbook Selected',
-        description: 'Please select a cookbook to export its recipes.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    if (!recipesToDisplay || recipesToDisplay.length === 0) {
-      toast({
-        title: 'No Recipes to Export',
-        description: 'This cookbook does not contain any recipes to export.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    try {
-      await exportCookbookRecipesToPDF(recipesToDisplay, currentSelectedCookbook.name);
-      toast({
-        title: 'Recipes Exported!',
-        description: `"${currentSelectedCookbook.name}" recipes downloaded as PDF.`
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Export Failed',
-        description: error.message || 'An error occurred while exporting recipes.',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleInviteCollaborator = async () => {
-    if (!currentSelectedCookbook || !user) return;
-    if (!collaboratorEmail.trim()) {
-      toast({ title: 'Email Required', description: 'Please enter an email address.', variant: 'destructive' });
-      return;
-    }
-    setIsInvitingCollaborator(true);
-    try {
-      await inviteCollaborator(currentSelectedCookbook.id, collaboratorEmail.trim());
-      setCollaboratorEmail('');
-      setShowInviteCollaboratorDialog(false);
-    } catch (error) {
-      // Toast handled by AppContext
-    } finally {
-      setIsInvitingCollaborator(false);
-    }
-  };
-
-  const handleManageCollaborators = (cookbook: Cookbook) => {
-    setCookbookToManageCollaborators(cookbook);
-    setShowManageCollaboratorsDialog(true);
-  };
-
-  const handleRemoveCollaborator = async (collaboratorUserId: string, collaboratorUsername: string) => {
-    if (!cookbookToManageCollaborators) return;
-    try {
-      await removeCollaborator(cookbookToManageCollaborators.id, collaboratorUserId);
-      toast({
-        title: 'Collaborator Removed',
-        description: `${collaboratorUsername} has been removed from "${cookbookToManageCollaborators.name}".`
-      });
-    } catch (error) {
-      // Toast handled by AppContext
-    }
-  };
-
-  const { data: collaborators, isLoading: isLoadingCollaborators } = useQuery<CookbookCollaborator[]>({
-    queryKey: ['cookbookCollaborators', cookbookToManageCollaborators?.id],
-    queryFn: async () => {
-      if (!cookbookToManageCollaborators) return [];
-      const { data, error } = await supabase
-        .from('cookbook_collaborators')
-        .select(`
-          id,
-          user_id,
-          role,
-          status,
-          users(username, email)
-        `)
-        .eq('cookbook_id', cookbookToManageCollaborators.id);
-      if (error) throw error;
-      return data as CookbookCollaborator[];
-    },
-    enabled: !!cookbookToManageCollaborators,
-  });
-
-  const isLoadingCurrentRecipes = user && currentSelectedCookbook?.user_id !== 'guest' ? isLoadingDbRecipes : false;
-
-  const getActiveRecipe = (activeId: string | null) => {
-    return recipesToDisplay.find((recipe) => recipe.id === activeId);
-  };
-
-  const handleDragEnd = async (event: any) => {
-    const { active, over } = event;
-
-    if (active.id !== over.id) {
-      setRecipesToDisplay((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        const newOrder = arrayMove(items, oldIndex, newIndex);
-        
-        // Update positions in the local state immediately
-        const updatedOrderWithPositions = newOrder.map((recipe, index) => ({
-          ...recipe,
-          position: index,
-        }));
-        
-        // Persist the new order to Supabase
-        if (currentSelectedCookbook) {
-          const orderedRecipeIds = updatedOrderWithPositions.map(r => r.id);
-          updateRecipeOrder(currentSelectedCookbook.id, orderedRecipeIds);
-        }
-        
-        return updatedOrderWithPositions;
-      });
-    }
-    setActiveId(null);
-  };
-
-  const handleDragStart = (event: any) => {
-    setActiveId(event.active.id);
-  };
-
-  const handleDragCancel = () => {
-    setActiveId(null);
   };
 
   return (
@@ -775,47 +441,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                   )}
                 </h4>
                 <div className="flex items-center gap-2">
-                  {currentSelectedCookbook && (
-                    <Button variant="ghost" size="sm" onClick={() => setShowManageRecipesDialog(true)} disabled={isLoadingCurrentRecipes}>
-                      <ListOrdered className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {canManageCollaborators && currentSelectedCookbook && (
-                    <Button variant="ghost" size="sm" onClick={() => handleManageCollaborators(currentSelectedCookbook)}>
-                      <Users className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {canEditCookbook && currentSelectedCookbook && (
-                    <Button variant="ghost" size="sm" onClick={() => handleEditCookbook(currentSelectedCookbook)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  )}
-                  {canDeleteCookbook && currentSelectedCookbook && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete the cookbook "{currentSelectedCookbook.name}" and all recipes within it.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction 
-                            onClick={() => handleDeleteCookbook(currentSelectedCookbook.id, currentSelectedCookbook.name)}
-                            className="bg-destructive hover:bg-destructive/90"
-                          >
-                            Delete Cookbook
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
+                  {/* Buttons for editing, managing collaborators, etc. will be in CookbookDetailsDialog */}
                 </div>
               </div>
               {currentSelectedCookbook?.description && (
@@ -862,72 +488,14 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
               </div>
 
               <div className="flex gap-2 mt-4">
-                <Button 
-                  onClick={handlePlanWithCookbook} 
-                  disabled={!currentSelectedCookbook || isLoadingCurrentRecipes}
-                  className="flex-1 bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600"
-                >
-                  <CalendarDays className="h-4 w-4 mr-2" />
-                  Plan with this Cookbook
-                </Button>
-                <Button 
-                  onClick={handleExportCookbookRecipes} 
-                  disabled={!currentSelectedCookbook || isLoadingCurrentRecipes || (recipesToDisplay?.length || 0) === 0}
-                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-                >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Export Recipes
-                </Button>
+                {/* Removed Plan with this Cookbook and Export Recipes buttons from here */}
               </div>
 
-              <div className="mt-4 space-y-2 max-h-64 overflow-y-auto custom-scrollbar">
-                {isLoadingCurrentRecipes ? (
-                  <div className="text-center py-4 text-muted-foreground">
-                    <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-                    Loading recipes...
-                  </div>
-                ) : recipesToDisplay && recipesToDisplay.length > 0 ? (
-                  <DndContext 
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragStart={handleDragStart}
-                    onDragEnd={handleDragEnd}
-                    onDragCancel={handleDragCancel}
-                  >
-                    <SortableContext 
-                      items={recipesToDisplay.map(r => r.id)} 
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {recipesToDisplay.map(recipe => (
-                        <SortableRecipeItem 
-                          key={recipe.id} 
-                          recipe={recipe} 
-                          onClick={handleViewRecipeDetails}
-                          onRemove={handleRemoveRecipe}
-                          canRemove={canAddRemoveRecipes}
-                        />
-                      ))}
-                    </SortableContext>
-                    <DragOverlay>
-                      {activeId ? (
-                        <div className="p-2 border rounded-lg bg-background/80 shadow-lg">
-                          <span className="text-sm font-medium truncate">
-                            {getActiveRecipe(activeId)?.title}
-                          </span>
-                        </div>
-                      ) : null}
-                    </DragOverlay>
-                  </DndContext>
-                ) : (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No recipes in this cookbook yet. Add some!
-                  </p>
-                )}
-              </div>
+              {/* Removed recipe list and DND from here */}
+              
               {currentSelectedCookbook && (
                 <Button 
-                  onClick={() => setShowManageRecipesDialog(true)} 
-                  disabled={isLoadingCurrentRecipes}
+                  onClick={handleOpenCookbookDetails} 
                   className="w-full mt-4 bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600"
                 >
                   <BookOpen className="h-4 w-4 mr-2" />
@@ -940,214 +508,13 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
       </CardContent>
       <UserAuth open={showAuthDialog} onOpenChange={setShowAuthDialog} onAuthSuccess={handleAuthSuccess} />
 
-      <Dialog open={showRecipeDetailsDialog} onOpenChange={setShowRecipeDetailsDialog}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedRecipeForDetails?.title}</DialogTitle>
-          </DialogHeader>
-          {selectedRecipeForDetails && (
-            <RecipeCard 
-              recipe={selectedRecipeForDetails} 
-              showFullDetails={true}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showEditCookbookDialog} onOpenChange={setShowEditCookbookDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Cookbook</DialogTitle>
-          </DialogHeader>
-          {editingCookbook && (
-            <div className="space-y-4">
-              <Input
-                placeholder="Cookbook name"
-                value={editingCookbookName}
-                onChange={(e) => setEditingCookbookName(e.target.value)}
-                disabled={isUpdatingCookbook}
-              />
-              <Textarea
-                placeholder="Description (optional)"
-                value={editingCookbookDescription}
-                onChange={(e) => setNewCookbookDescription(e.target.value)}
-                disabled={isUpdatingCookbook}
-                rows={3}
-              />
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="edit-cookbook-public"
-                  checked={editingCookbookIsPublic}
-                  onCheckedChange={setEditingCookbookIsPublic}
-                  disabled={isUpdatingCookbook}
-                />
-                <Label htmlFor="edit-cookbook-public">
-                  {editingCookbookIsPublic ? (
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Globe className="h-4 w-4" /> Public
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Lock className="h-4 w-4" /> Private
-                    </span>
-                  )}
-                </Label>
-              </div>
-              <Button onClick={handleUpdateCookbook} disabled={isUpdatingCookbook} className="w-full">
-                {isUpdatingCookbook ? 'Updating...' : 'Save Changes'}
-              </Button>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Invite Collaborator Dialog */}
-      <Dialog open={showInviteCollaboratorDialog} onOpenChange={setShowInviteCollaboratorDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5" /> Invite Collaborator
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Invite a friend to collaborate on "{currentSelectedCookbook?.name}". They will be able to add and remove recipes.
-            </p>
-            <Input
-              type="email"
-              placeholder="Collaborator's email address"
-              value={collaboratorEmail}
-              onChange={(e) => setCollaboratorEmail(e.target.value)}
-              disabled={isInvitingCollaborator}
-            />
-            <Button onClick={handleInviteCollaborator} disabled={isInvitingCollaborator || !collaboratorEmail.trim()} className="w-full">
-              {isInvitingCollaborator ? 'Sending Invitation...' : 'Send Invitation'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Manage Collaborators Dialog */}
-      <Dialog open={showManageCollaboratorsDialog} onOpenChange={setShowManageCollaboratorsDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" /> Manage Collaborators for "{cookbookToManageCollaborators?.name}"
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {canManageCollaborators && (
-              <Button onClick={() => setShowInviteCollaboratorDialog(true)} className="w-full">
-                <UserPlus className="h-4 w-4 mr-2" /> Invite New Collaborator
-              </Button>
-            )}
-            <h3 className="font-semibold text-sm mt-4">Current Collaborators:</h3>
-            {isLoadingCollaborators ? (
-              <div className="text-center text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin mx-auto" />
-                Loading collaborators...
-              </div>
-            ) : collaborators && collaborators.length > 0 ? (
-              <div className="space-y-2">
-                {collaborators.map(collab => (
-                  <div key={collab.id} className="flex items-center justify-between p-2 border rounded">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{collab.users.username || collab.users.email}</span>
-                      <Badge variant="secondary" className="text-xs">{collab.status}</Badge>
-                      <Badge variant="outline" className="text-xs">
-                        {collab.role === 'editor' ? 'Editor' : collab.role}
-                      </Badge>
-                    </div>
-                    {canManageCollaborators && collab.user_id !== user?.id && ( // Cannot remove self via this dialog
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Remove Collaborator?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to remove "{collab.users.username || collab.users.email}" from "{cookbookToManageCollaborators?.name}"?
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={() => handleRemoveCollaborator(collab.user_id, collab.users.username || collab.users.email)}
-                              className="bg-destructive hover:bg-destructive/90"
-                            >
-                              Remove
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No collaborators yet. Invite some!</p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Manage Recipes Dialog */}
-      <Dialog open={showManageRecipesDialog} onOpenChange={setShowManageRecipesDialog}>
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ListOrdered className="h-5 w-5" /> Manage Recipes in "{currentSelectedCookbook?.name}"
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {isLoadingCurrentRecipes ? (
-              <div className="text-center py-4 text-muted-foreground">
-                <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-                Loading recipes...
-              </div>
-            ) : recipesToDisplay && recipesToDisplay.length > 0 ? (
-              <DndContext 
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
-                onDragCancel={handleDragCancel}
-              >
-                <SortableContext 
-                  items={recipesToDisplay.map(r => r.id)} 
-                  strategy={verticalListSortingStrategy}
-                >
-                  {recipesToDisplay.map(recipe => (
-                    <SortableRecipeItem 
-                      key={recipe.id} 
-                      recipe={recipe} 
-                      onClick={handleViewRecipeDetails}
-                      onRemove={handleRemoveRecipe}
-                      canRemove={canAddRemoveRecipes}
-                    />
-                  ))}
-                </SortableContext>
-                <DragOverlay>
-                  {activeId ? (
-                    <div className="p-2 border rounded-lg bg-background/80 shadow-lg">
-                      <span className="text-sm font-medium truncate">
-                        {getActiveRecipe(activeId)?.title}
-                      </span>
-                    </div>
-                  ) : null}
-                </DragOverlay>
-              </DndContext>
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No recipes in this cookbook yet. Add some!
-              </p>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <CookbookDetailsDialog
+        open={showCookbookDetailsDialog}
+        onOpenChange={setShowCookbookDetailsDialog}
+        cookbook={currentSelectedCookbook}
+        onRecipeRemoved={onRecipeRemoved}
+        setActiveTab={setActiveTab}
+      />
     </Card>
   );
 };
