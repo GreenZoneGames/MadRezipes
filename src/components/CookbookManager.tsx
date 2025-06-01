@@ -161,13 +161,6 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   const [editingCookbookIsPublic, setEditingCookbookIsPublic] = useState(false);
   const [isUpdatingCookbook, setIsUpdatingCookbook] = useState(false);
 
-  // Removed copy cookbook states
-  // const [showCopyCookbookDialog, setShowCopyCookbookDialog] = useState(false);
-  // const [cookbookToCopyId, setCookbookToCopyId] = useState('');
-  // const [copiedCookbookName, setCopiedCookbookName] = useState('');
-  // const [copiedCookbookIsPublic, setCopiedCookbookIsPublic] = useState(false);
-  // const [isCopyingCookbook, setIsCopyingCookbook] = useState(false);
-
   const [selectedCookbookIds, setSelectedCookbookIds] = useState<Set<string>>(new Set());
 
   const [showInviteCollaboratorDialog, setShowInviteCollaboratorDialog] = useState(false);
@@ -177,7 +170,6 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   const [showManageCollaboratorsDialog, setShowManageCollaboratorsDialog] = useState(false);
   const [cookbookToManageCollaborators, setCookbookToManageCollaborators] = useState<Cookbook | null>(null);
 
-  // New state for managing recipes dialog
   const [showManageRecipesDialog, setShowManageRecipesDialog] = useState(false);
 
   // DND state
@@ -425,48 +417,6 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
       setLoading(false);
     }
   };
-
-  // Removed handleCopyCookbook function
-  // const handleCopyCookbook = async () => {
-  //   if (!user) {
-  //     toast({
-  //       title: 'Sign In Required',
-  //       description: 'Please sign in to copy cookbooks.',
-  //       variant: 'destructive'
-  //     });
-  //     setShowAuthDialog(true);
-  //     return;
-  //   }
-  //   if (!cookbookToCopyId.trim()) {
-  //     toast({
-  //       title: 'Cookbook ID Required',
-  //       description: 'Please enter the ID of the cookbook you want to copy.',
-  //       variant: 'destructive'
-  //     });
-  //     return;
-  //   }
-  //   if (!copiedCookbookName.trim()) {
-  //     toast({
-  //       title: 'New Name Required',
-  //       description: 'Please enter a name for your new cookbook.',
-  //       variant: 'destructive'
-  //     });
-  //     return;
-  //   }
-
-  //   setIsCopyingCookbook(true);
-  //   try {
-  //     await copyCookbook(cookbookToCopyId.trim(), copiedCookbookName.trim(), copiedCookbookIsPublic);
-  //     setCookbookToCopyId('');
-  //     setCopiedCookbookName('');
-  //     setCopiedCookbookIsPublic(false);
-  //     setShowCopyCookbookDialog(false);
-  //   } catch (error) {
-  //     // Toast handled by copyCookbook function in AppContext
-  //   } finally {
-  //     setIsCopyingCookbook(false);
-  //   }
-  // };
 
   const handleSaveToAccount = () => {
     if (!user) {
@@ -725,72 +675,6 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                 </div>
               </DialogContent>
             </Dialog>
-            {/* Removed Copy Cookbook Dialog Trigger */}
-            {/* {user && (
-              <Dialog open={showCopyCookbookDialog} onOpenChange={setShowCopyCookbookDialog}>
-                <DialogTrigger asChild>
-                  <Button size="sm" variant="outline" className="text-purple-500 hover:text-purple-600 border-purple-300">
-                    <Copy className="h-4 w-4 mr-1" />
-                    Copy
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Copy className="h-5 w-5" />
-                      Copy Public Cookbook
-                    </DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Enter the ID of a public cookbook you wish to copy to your collection.
-                    </p>
-                    <Input
-                      placeholder="Public Cookbook ID"
-                      value={cookbookToCopyId}
-                      onChange={(e) => setCookbookToCopyId(e.target.value)}
-                      disabled={isCopyingCookbook}
-                    />
-                    <Input
-                      placeholder="New name for your copy (e.g., 'My Italian Favorites')"
-                      value={copiedCookbookName}
-                      onChange={(e) => setCopiedCookbookName(e.target.value)}
-                      disabled={isCopyingCookbook}
-                    />
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="copied-cookbook-public"
-                        checked={copiedCookbookIsPublic}
-                        onCheckedChange={setCopiedCookbookIsPublic}
-                        disabled={isCopyingCookbook}
-                      />
-                      <Label htmlFor="copied-cookbook-public">
-                        {copiedCookbookIsPublic ? (
-                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Globe className="h-4 w-4" /> Make Public
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Lock className="h-4 w-4" /> Keep Private
-                          </span>
-                        )}
-                      </Label>
-                    </div>
-                    <Button onClick={handleCopyCookbook} disabled={isCopyingCookbook || !cookbookToCopyId.trim() || !copiedCookbookName.trim()} className="w-full">
-                      {isCopyingCookbook ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Copying...
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4 mr-2" /> Copy Cookbook
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )} */}
           </div>
         </CardTitle>
       </CardHeader>
@@ -865,59 +749,9 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
           </Select>
 
           {uniqueCookbooks.length === 0 ? (
-            <div className="text-center py-4 text-sm space-y-2">
-              <p className="text-muted-foreground">No cookbooks yet. Create your first one!</p>
-              <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-                <DialogTrigger asChild>
-                  <Button size="sm" className="bg-blue-500 hover:bg-blue-600">
-                    <Plus className="h-4 w-4 mr-1" />
-                    Create New Cookbook
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>Create New Cookbook</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <Input
-                      placeholder="Cookbook name"
-                      value={newCookbookName}
-                      onChange={(e) => setNewCookbookName(e.target.value)}
-                      disabled={loading}
-                    />
-                    <Textarea
-                      placeholder="Description (optional)"
-                      value={newCookbookDescription}
-                      onChange={(e) => setNewCookbookDescription(e.target.value)}
-                      disabled={loading}
-                      rows={3}
-                    />
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="new-cookbook-public-dialog"
-                        checked={newCookbookIsPublic}
-                        onCheckedChange={setNewCookbookIsPublic}
-                        disabled={loading}
-                      />
-                      <Label htmlFor="new-cookbook-public-dialog">
-                        {newCookbookIsPublic ? (
-                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Globe className="h-4 w-4" /> Public
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                            <Lock className="h-4 w-4" /> Private
-                          </span>
-                        )}
-                      </Label>
-                    </div>
-                    <Button onClick={handleCreateCookbook} disabled={loading} className="w-full">
-                      {loading ? 'Creating...' : 'Create Cookbook'}
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+            <p className="text-muted-foreground text-center py-4 text-sm">
+              No cookbooks yet. Create your first one!
+            </p>
           ) : (
             <div className="space-y-2">
               <div className="flex items-center justify-between mt-4">
@@ -1090,6 +924,16 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                   </p>
                 )}
               </div>
+              {currentSelectedCookbook && (
+                <Button 
+                  onClick={() => setShowManageRecipesDialog(true)} 
+                  disabled={isLoadingCurrentRecipes}
+                  className="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                >
+                  <BookOpen className="h-4 w-4 mr-2" />
+                  Open Selected Cookbook
+                </Button>
+              )}
             </div>
           )}
         </div>
@@ -1126,7 +970,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
               <Textarea
                 placeholder="Description (optional)"
                 value={editingCookbookDescription}
-                onChange={(e) => setEditingCookbookDescription(e.target.value)}
+                onChange={(e) => setNewCookbookDescription(e.target.value)}
                 disabled={isUpdatingCookbook}
                 rows={3}
               />
