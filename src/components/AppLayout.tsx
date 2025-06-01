@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAppContext } from '@/contexts/AppContext';
 import { useIsMobile } from '@/hooks/use-mobile';
 import RecipeScraper from './RecipeScraper';
@@ -10,9 +10,11 @@ import TopBar from './TopBar';
 import FriendsList from './FriendsList';
 import CookbookManager from './CookbookManager';
 import { Button } from '@/components/ui/button';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Search, Utensils, Filter, XCircle } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Recipe } from '@/types/recipe'; // Import Recipe from central types file
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const AppLayout: React.FC = () => {
   const { sidebarOpen, toggleSidebar } = useAppContext();
@@ -20,6 +22,8 @@ const AppLayout: React.FC = () => {
   const [recipes, setRecipes] = useState<Recipe[]>([]); // This state will now primarily hold scraped/generated recipes before DB save, and then be updated by DB changes.
   const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
   const [shoppingList, setShoppingList] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [mealTypeFilter, setMealTypeFilter] = useState('');
 
   const handleRecipeAdded = (recipe: Recipe) => {
     setRecipes(prev => {
@@ -61,6 +65,26 @@ const AppLayout: React.FC = () => {
 
   const handleRecipeGenerated = (recipe: Recipe) => {
     setRecipes(prev => [...prev, recipe]);
+  };
+
+  const filteredRecipes = useMemo(() => {
+    return recipes.filter(recipe => {
+      const matchesSearch = searchTerm === '' ||
+        recipe.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        recipe.ingredients.some(ingredient => ingredient.toLowerCase().includes(searchTerm.toLowerCase()));
+      
+      const matchesMealType = mealTypeFilter === '' ||
+        (recipe.meal_type && recipe.meal_type.toLowerCase() === mealTypeFilter.toLowerCase());
+      
+      return matchesSearch && matchesMealType;
+    });
+  }, [recipes, searchTerm, mealTypeFilter]);
+
+  const mealTypes = ['Breakfast', 'Lunch', 'Dinner', 'Appetizer', 'Dessert', 'Snack'];
+
+  const handleClearFilters = () => {
+    setSearchTerm('');
+    setMealTypeFilter('');
   };
 
   return (
@@ -107,6 +131,50 @@ const AppLayout: React.FC = () => {
             
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-foreground">Your Recipe Collection</h2>
+              
+              {/* Search and Filter Controls */}
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by title or ingredient..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={mealTypeFilter} onValueChange={setMealTypeFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Filter by meal type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Meal Types</SelectItem>
+                    {mealTypes.map(type => (
+                      <SelectItem key={type} value={type}>
+                        <span className="flex items-center gap-2">
+                          <Utensils className="h-4 w-4" /> {type}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {(searchTerm !== '' || mealTypeFilter !== '') && (
+                  <Button variant="outline" onClick={handleClearFilters} className="w-full sm:w-auto">
+                    <XCircle className="h-4 w-4 mr-2" /> Clear Filters
+                  </Button>
+                )}
+              </div>
+
+              {filteredRecipes.length === 0 && recipes.length > 0 && (
+                <div className="text-center py-8 text-muted-foreground animate-fade-in">
+                  <p>No recipes match your current filters.</p>
+                  <Button variant="link" onClick={handleClearFilters} className="mt-2">
+                    Clear Filters
+                  </Button>
+                </div>
+              )}
+
               {recipes.length === 0 ? (
                 <div className="text-center py-12 text-muted-foreground animate-fade-in">
                   <p>No recipes yet. Start by scraping recipes from a URL!</p>
@@ -114,7 +182,7 @@ const AppLayout: React.FC = () => {
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {recipes.map(recipe => (
+                  {filteredRecipes.map(recipe => (
                     <RecipeCard
                       key={recipe.id}
                       recipe={recipe}
