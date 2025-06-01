@@ -9,6 +9,25 @@ const corsHeaders = {
 const MAX_PAGES_TO_SCRAPE = 5; // Limit the number of pages to scrape per request
 const MAX_DEPTH = 1; // Limit the depth of link traversal (0 for initial page only, 1 for initial + direct links)
 
+// Helper function to parse ISO 8601 duration strings (e.g., "PT4H", "PT30M", "PT1H30M")
+const parseDuration = (isoDuration: string | null): string | null => {
+  if (!isoDuration) return null;
+  const matches = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+  if (!matches) return isoDuration; // Return original if not a recognized format
+
+  const hours = matches[1] ? parseInt(matches[1]) : 0;
+  const minutes = matches[2] ? parseInt(matches[2]) : 0;
+
+  let readableDuration = [];
+  if (hours > 0) {
+    readableDuration.push(`${hours}h`);
+  }
+  if (minutes > 0) {
+    readableDuration.push(`${minutes}m`);
+  }
+  return readableDuration.length > 0 ? readableDuration.join(' ') : null;
+};
+
 // Helper function to extract recipes from a single HTML string
 const extractRecipesFromHtml = (html: string, url: string) => {
   const recipes = [];
@@ -33,8 +52,9 @@ const extractRecipesFromHtml = (html: string, url: string) => {
                 ? data.recipeInstructions.map((step: any) => step.text || step).filter(Boolean) 
                 : [],
               url: data.url || url,
-              image: data.image?.url || (Array.isArray(data.image) ? data.image[0]?.url : data.image) || null,
-              cookTime: data.cookTime || data.totalTime || null,
+              // Improved image extraction: handles single URL string or array of URLs
+              image: (Array.isArray(data.image) ? data.image[0] : data.image) || null,
+              cookTime: parseDuration(data.cookTime || data.totalTime), // Parse ISO duration
               servings: data.recipeYield || null,
               mealType: data.recipeCategory || null,
             };
