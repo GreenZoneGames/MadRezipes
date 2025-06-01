@@ -47,9 +47,8 @@ const TopBar: React.FC<TopBarProps> = ({
   const [showAuth, setShowAuth] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [showFriendsDialog, setShowFriendsDialog] = useState(false);
-  const [showShoppingListDialog, setShowShoppingListDialog] = useState(false);
-  const [showMealPlannerDialog, setShowMealPlannerDialog] = useState(false);
+  // Removed states for Friends, Shopping List, Meal Planner dialogs as they are now in MobileNavMenu
+
   const [hasShownLoginToast, setHasShownLoginToast] = useState(false);
 
   useEffect(() => {
@@ -80,67 +79,59 @@ const TopBar: React.FC<TopBarProps> = ({
     }
   };
 
-  const handleFriendsClick = () => {
-    setShowFriendsDialog(true);
-  };
-
-  const handleShoppingListClick = () => {
-    setShowShoppingListDialog(true);
-  };
-
-  const handleMealPlannerClick = () => {
-    setShowMealPlannerDialog(true);
-  };
-
   const iconButtonClasses = "text-white hover:text-white hover:bg-white/10 border border-white/20 hover:border-white/40";
 
   return (
     <div className="flex items-center gap-3">
-      {/* Message Inbox Button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleMessageClick}
-        className={cn(iconButtonClasses)}
-      >
-        <MessageCircle className="h-4 w-4" />
-        {!isMobile && <span className="ml-1">Messages</span>}
-      </Button>
-      
-      {/* Friends Button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleFriendsClick}
-        className={cn(iconButtonClasses)}
-      >
-        <Users className="h-4 w-4" />
-        {!isMobile && <span className="ml-1">Friends</span>}
-      </Button>
+      {/* Message Inbox Button (only visible on desktop, on mobile it's in the menu) */}
+      {!isMobile && (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleMessageClick}
+            className={cn(iconButtonClasses)}
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span className="ml-1">Messages</span>
+          </Button>
+          
+          {/* Friends Button (only visible on desktop) */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { /* This will be handled by MobileNavMenu on mobile */ }}
+            className={cn(iconButtonClasses)}
+          >
+            <Users className="h-4 w-4" />
+            <span className="ml-1">Friends</span>
+          </Button>
 
-      {/* Shopping List Button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleShoppingListClick}
-        className={cn(iconButtonClasses)}
-      >
-        <ShoppingCart className="h-4 w-4" />
-        {!isMobile && <span className="ml-1">List</span>}
-      </Button>
+          {/* Shopping List Button (only visible on desktop) */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { /* This will be handled by MobileNavMenu on mobile */ }}
+            className={cn(iconButtonClasses)}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            <span className="ml-1">List</span>
+          </Button>
 
-      {/* Meal Planner Button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleMealPlannerClick}
-        className={cn(iconButtonClasses)}
-      >
-        <ChefHat className="h-4 w-4" />
-        {!isMobile && <span className="ml-1">Planner</span>}
-      </Button>
+          {/* Meal Planner Button (only visible on desktop) */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { /* This will be handled by MobileNavMenu on mobile */ }}
+            className={cn(iconButtonClasses)}
+          >
+            <ChefHat className="h-4 w-4" />
+            <span className="ml-1">Planner</span>
+          </Button>
+        </>
+      )}
 
-      {/* User Profile / Sign In Button */}
+      {/* User Profile / Sign In Button (always visible) */}
       {user ? (
         <div className={cn(
           "flex items-center gap-2 transition-all duration-500 ease-in-out",
@@ -171,30 +162,7 @@ const TopBar: React.FC<TopBarProps> = ({
       <UserAuth open={showAuth} onOpenChange={setShowAuth} />
       <MessageInbox open={showMessages} onOpenChange={setShowMessages} />
       <UserProfileDialog open={showProfile} onOpenChange={setShowProfile} />
-      <FriendsDialog 
-        open={showFriendsDialog} 
-        onOpenChange={setShowFriendsDialog} 
-        onOpenDm={onOpenDm} 
-      />
-      <ShoppingListDialog
-        open={showShoppingListDialog}
-        onOpenChange={setShowShoppingListDialog}
-        recipes={recipes}
-        mealPlan={mealPlan}
-        onShoppingListChange={onShoppingListChange}
-      />
-      <MealPlannerDialog
-        open={showMealPlannerDialog}
-        onOpenChange={setShowMealPlannerDialog}
-        recipes={recipes}
-        mealPlan={mealPlan}
-        onMealPlanChange={onMealPlanChange}
-        availableIngredients={availableIngredients}
-        onRecipeGenerated={onRecipeGenerated}
-        selectedMonth={selectedMonth}
-        setSelectedMonth={setSelectedMonth}
-        allRecipes={recipes}
-      />
+      {/* Removed dialogs from TopBar as they are now managed by MobileNavMenu or AppLayout */}
     </div>
   );
 };

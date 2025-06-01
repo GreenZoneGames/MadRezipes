@@ -13,6 +13,7 @@ import CookbookManager from './CookbookManager';
 import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
+import MobileNavMenu from './MobileNavMenu'; // Import the new component
 
 interface Recipe {
   id: string;
@@ -160,6 +161,23 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           </div>
         </div>
       </header>
+
+      {isMobile && (
+        <MobileNavMenu
+          open={sidebarOpen}
+          onOpenChange={toggleSidebar}
+          onOpenDm={onOpenDm}
+          recipes={localRecipes}
+          mealPlan={localMealPlan}
+          onShoppingListChange={handleLocalShoppingListChange}
+          onMealPlanChange={handleLocalMealPlanChange}
+          availableIngredients={localShoppingList}
+          onRecipeGenerated={handleRecipeGenerated}
+          selectedMonth={selectedMonth}
+          setSelectedMonth={setSelectedMonth}
+          setActiveTab={setActiveTab}
+        />
+      )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className={`grid gap-8 ${
