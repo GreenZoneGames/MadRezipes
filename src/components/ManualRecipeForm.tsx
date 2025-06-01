@@ -9,10 +9,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useForm } from 'react-hook-form'; // Corrected import
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Plus, BookOpen, Save, UtensilsCrossed } from 'lucide-react';
+import { Plus, BookOpen, Save, UtensilsCrossed, Globe, Lock } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import { v4 as uuidv4 } from 'uuid';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 // Define the Zod schema for form validation
 const formSchema = z.object({
@@ -27,7 +29,7 @@ const formSchema = z.object({
     z.number().int().positive({ message: 'Servings must be a positive number.' }).optional()
   ),
   mealType: z.enum(['Breakfast', 'Lunch', 'Dinner', 'Appetizer', 'Dessert', 'Snack']).optional().or(z.literal('')),
-  cookbookId: z.string().min(1, { message: 'Please select a cookbook.' }),
+  cookbookId: z.string().optional(), // Make optional as it might be created
 });
 
 interface ManualRecipeFormProps {
@@ -36,11 +38,10 @@ interface ManualRecipeFormProps {
 
 const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) => {
   const { user, cookbooks, guestCookbooks, createCookbook, addRecipeToCookbook } = useAppContext();
-  const [showCreateCookbookDialog, setShowCreateCookbookDialog] = useState(false);
+  const [isCreatingNewCookbook, setIsCreatingNewCookbook] = useState(false);
   const [newCookbookName, setNewCookbookName] = useState('');
   const [newCookbookDescription, setNewCookbookDescription] = useState('');
   const [newCookbookIsPublic, setNewCookbookIsPublic] = useState(false);
-  const [creatingCookbook, setCreatingCookbook] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const allAvailableCookbooks = useMemo(() => {
@@ -65,31 +66,27 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
     },
   });
 
-  const handleCreateNewCookbook = async () => {
-    if (!newCookbookName.trim()) {
-      toast({ title: 'Name Required', description: 'Please enter a name for the new cookbook.', variant: 'destructive' });
-      return;
-    }
-    setCreatingCookbook(true);
-    try {
-      const newCookbook = await createCookbook(newCookbookName.trim(), newCookbookDescription.trim(), newCookbookIsPublic);
-      setNewCookbookName('');
-      setNewCookbookDescription('');
-      toast({ title: 'Cookbook Created!', description: `"${newCookbookName}" has been created.` });
-      if (newCookbook) {
-        form.setValue('cookbookId', newCookbook.id); // Automatically select the new cookbook
-      }
-      setShowCreateCookbookDialog(false);
-    } catch (error: any) {
-      toast({ title: 'Creation Failed', description: error.message || 'Failed to create cookbook.', variant: 'destructive' });
-    } finally {
-      setCreatingCookbook(false);
-    }
-  };
-
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
+    let targetCookbookId = values.cookbookId;
+
     try {
+      if (isCreatingNewCookbook) {
+        if (!newCookbookName.trim()) {
+          toast({ title: 'Name Required', description: 'Please enter a name for the new cookbook.', variant: 'destructive' });
+          return; // Stop submission if name is missing
+        }
+        const newCookbook = await createCookbook(newCookbookName.trim(), newCookbookDescription.trim(), newCookbookIsPublic);
+        if (!newCookbook) {
+          throw new Error('Failed to create new cookbook.');
+        }
+        targetCookbookId = newCookbook.id;
+        toast({ title: 'Cookbook Created!', description: `"${newCookbookName}" has been created.` });
+      } else if (!targetCookbookId) {
+        toast({ title: 'Cookbook Required', description: 'Please select an existing cookbook or create a new one.', variant: 'destructive' });
+        return; // Stop submission if no cookbook is selected/created
+      }
+
       const recipeData = {
         id: uuidv4(), // Generate a unique ID for the recipe
         title: values.title,
@@ -103,14 +100,18 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
         categorized_ingredients: {}, // Manual entry doesn't categorize, leave empty or add logic later
       };
 
-      await addRecipeToCookbook(recipeData, values.cookbookId);
-      onRecipeAdded({ ...recipeData, cookbook_id: values.cookbookId }); // Notify parent component
+      await addRecipeToCookbook(recipeData, targetCookbookId);
+      onRecipeAdded({ ...recipeData, cookbook_id: targetCookbookId }); // Notify parent component
       
       toast({
         title: 'Recipe Added!',
         description: `"${values.title}" has been successfully added to your cookbook.`
       });
       form.reset(); // Reset form fields
+      setIsCreatingNewCookbook(false); // Reset new cookbook state
+      setNewCookbookName('');
+      setNewCookbookDescription('');
+      setNewCookbookIsPublic(false);
     } catch (error: any) {
       toast({
         title: 'Failed to Add Recipe',
@@ -267,60 +268,77 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Add to Cookbook</FormLabel>
-                  <div className="flex gap-2">
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger className="flex-1">
-                          <SelectValue placeholder="Select an existing cookbook" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {allAvailableCookbooks.length === 0 ? (
-                          <SelectItem value="no-cookbooks" disabled>No cookbooks found</SelectItem>
-                        ) : (
-                          allAvailableCookbooks.map(cb => (
-                            <SelectItem key={cb.id} value={cb.id}>{cb.name} {cb.user_id === 'guest' && '(Unsaved)'}</SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <Dialog open={showCreateCookbookDialog} onOpenChange={setShowCreateCookbookDialog}>
-                      <DialogTrigger asChild>
-                        <Button type="button" size="sm" variant="outline">
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle className="flex items-center gap-2">
-                            <BookOpen className="h-5 w-5" />
-                            Create New Cookbook
-                          </DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <Input
-                            placeholder="Cookbook name"
-                            value={newCookbookName}
-                            onChange={(e) => setNewCookbookName(e.target.value)}
-                            disabled={creatingCookbook}
-                          />
-                          <Textarea
-                            placeholder="Description (optional)"
-                            value={newCookbookDescription}
-                            onChange={(e) => setNewCookbookDescription(e.target.value)}
-                            disabled={creatingCookbook}
-                          />
-                          <Button onClick={handleCreateNewCookbook} disabled={creatingCookbook} className="w-full">
-                            {creatingCookbook ? 'Creating...' : 'Create Cookbook'}
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
+                  <Select 
+                    onValueChange={(value) => {
+                      if (value === "create-new") {
+                        setIsCreatingNewCookbook(true);
+                        field.onChange(''); // Clear the field value for new cookbook
+                      } else {
+                        setIsCreatingNewCookbook(false);
+                        field.onChange(value);
+                      }
+                    }} 
+                    value={isCreatingNewCookbook ? "create-new" : field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="flex-1">
+                        <SelectValue placeholder="Select an existing cookbook or create new" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {allAvailableCookbooks.length > 0 && (
+                        <p className="px-2 py-1 text-xs text-muted-foreground">Existing Cookbooks:</p>
+                      )}
+                      {allAvailableCookbooks.map(cb => (
+                        <SelectItem key={cb.id} value={cb.id}>{cb.name} {cb.user_id === 'guest' && '(Unsaved)'}</SelectItem>
+                      ))}
+                      <SelectItem value="create-new" className="font-semibold text-blue-500">
+                        <Plus className="h-4 w-4 mr-2 inline-block" /> Create New Cookbook...
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {isCreatingNewCookbook && (
+              <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
+                <h4 className="font-semibold text-sm">New Cookbook Details:</h4>
+                <Input
+                  placeholder="New cookbook name"
+                  value={newCookbookName}
+                  onChange={(e) => setNewCookbookName(e.target.value)}
+                  disabled={isSubmitting}
+                />
+                <Textarea
+                  placeholder="Description (optional)"
+                  value={newCookbookDescription}
+                  onChange={(e) => setNewCookbookDescription(e.target.value)}
+                  disabled={isSubmitting}
+                  rows={2}
+                />
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="new-cookbook-public-manual"
+                    checked={newCookbookIsPublic}
+                    onCheckedChange={setNewCookbookIsPublic}
+                    disabled={isSubmitting}
+                  />
+                  <Label htmlFor="new-cookbook-public-manual">
+                    {newCookbookIsPublic ? (
+                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Globe className="h-4 w-4" /> Public
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Lock className="h-4 w-4" /> Private
+                      </span>
+                    )}
+                  </Label>
+                </div>
+              </div>
+            )}
 
             <Button type="submit" className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600" disabled={isSubmitting}>
               {isSubmitting ? (

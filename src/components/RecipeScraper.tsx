@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, ChefHat, Plus, Utensils, CheckCircle, BookOpen } from 'lucide-react';
+import { Loader2, ChefHat, Plus, Utensils, CheckCircle, BookOpen, Globe, Lock } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,6 +10,9 @@ import { supabase } from '@/lib/supabase';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAppContext } from '@/contexts/AppContext';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -45,10 +48,13 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
   const [loading, setLoading] = useState(false);
   const [scrapedRecipes, setScrapedRecipes] = useState<Recipe[]>([]);
   const [selectedRecipes, setSelectedRecipes] = useState(new Set<string>());
-  const [showCookbookDialog, setShowCookbookDialog] = useState(false);
+  const [showAddRecipeToCookbookDialog, setShowAddRecipeToCookbookDialog] = useState(false);
   const [selectedCookbookId, setSelectedCookbookId] = useState('');
+  const [isCreatingNewCookbook, setIsCreatingNewCookbook] = useState(false);
   const [newCookbookName, setNewCookbookName] = useState('');
-  const [creatingCookbook, setCreatingCookbook] = useState(false);
+  const [newCookbookDescription, setNewCookbookDescription] = useState('');
+  const [newCookbookIsPublic, setNewCookbookIsPublic] = useState(false);
+  const [addingRecipesToCookbook, setAddingRecipesToCookbook] = useState(false);
 
   const allAvailableCookbooks = useMemo(() => {
     const combined = [...cookbooks, ...guestCookbooks];
@@ -130,21 +136,36 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
   };
 
   const handleAddSelectedToCookbook = async () => {
-    if (allAvailableCookbooks.length === 0) {
-      toast({ title: 'No Cookbooks', description: 'Please create a cookbook first.', variant: 'destructive' });
+    if (isCreatingNewCookbook && !newCookbookName.trim()) {
+      toast({ title: 'Name Required', description: 'Please enter a name for the new cookbook.', variant: 'destructive' });
       return;
     }
-    if (!selectedCookbookId) {
+    if (!isCreatingNewCookbook && !selectedCookbookId) {
       toast({ title: 'Cookbook Required', description: 'Please select a cookbook.', variant: 'destructive' });
       return;
     }
+    if (selectedRecipes.size === 0) {
+      toast({ title: 'No Recipes Selected', description: 'Please select at least one recipe to add.', variant: 'destructive' });
+      return;
+    }
 
-    setLoading(true);
+    setAddingRecipesToCookbook(true);
+    let targetCookbookId = selectedCookbookId;
+
     try {
+      if (isCreatingNewCookbook) {
+        const newCookbook = await createCookbook(newCookbookName.trim(), newCookbookDescription.trim(), newCookbookIsPublic);
+        if (!newCookbook) {
+          throw new Error('Failed to create new cookbook.');
+        }
+        targetCookbookId = newCookbook.id;
+        toast({ title: 'Cookbook Created!', description: `"${newCookbookName}" has been created.` });
+      }
+
       const recipesToAdd = scrapedRecipes.filter(recipe => selectedRecipes.has(recipe.id));
       for (const recipe of recipesToAdd) {
-        await addRecipeToCookbook(recipe, selectedCookbookId);
-        onRecipeAdded({ ...recipe, cookbook_id: selectedCookbookId }); // Update local state with cookbook_id
+        await addRecipeToCookbook(recipe, targetCookbookId);
+        onRecipeAdded({ ...recipe, cookbook_id: targetCookbookId }); // Update local state with cookbook_id
       }
       
       toast({
@@ -154,7 +175,13 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
       setScrapedRecipes([]);
       setSelectedRecipes(new Set());
       setUrl('');
-      setShowCookbookDialog(false);
+      setShowAddRecipeToCookbookDialog(false);
+      // Reset new cookbook fields
+      setIsCreatingNewCookbook(false);
+      setNewCookbookName('');
+      setNewCookbookDescription('');
+      setNewCookbookIsPublic(false);
+      setSelectedCookbookId(''); // Clear selected cookbook
     } catch (error: any) {
       toast({
         title: 'Failed to Add Recipes',
@@ -162,27 +189,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
         variant: 'destructive'
       });
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateNewCookbook = async () => {
-    if (!newCookbookName.trim()) {
-      toast({ title: 'Name Required', description: 'Please enter a name for the new cookbook.', variant: 'destructive' });
-      return;
-    }
-    setCreatingCookbook(true);
-    try {
-      const newCookbook = await createCookbook(newCookbookName.trim());
-      setNewCookbookName('');
-      toast({ title: 'Cookbook Created!', description: `"${newCookbookName}" has been created.` });
-      if (newCookbook) {
-        setSelectedCookbookId(newCookbook.id); // Automatically select the new cookbook
-      }
-    } catch (error: any) {
-      toast({ title: 'Creation Failed', description: error.message || 'Failed to create cookbook.', variant: 'destructive' });
-    } finally {
-      setCreatingCookbook(false);
+      setAddingRecipesToCookbook(false);
     }
   };
 
@@ -263,7 +270,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                   {selectedRecipes.size === scrapedRecipes.length ? 'Deselect All' : 'Select All'}
                 </Button>
                 {selectedRecipes.size > 0 && (
-                  <Dialog open={showCookbookDialog} onOpenChange={setShowCookbookDialog}>
+                  <Dialog open={showAddRecipeToCookbookDialog} onOpenChange={setShowAddRecipeToCookbookDialog}>
                     <DialogTrigger asChild>
                       <Button
                         className="bg-gradient-to-r from-green-500 to-emerald-500"
@@ -276,43 +283,87 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                       <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                           <BookOpen className="h-5 w-5" />
-                          Add to Cookbook
+                          Add Selected Recipes to Cookbook
                         </DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
-                        {allAvailableCookbooks.length > 0 ? (
-                          <Select value={selectedCookbookId} onValueChange={setSelectedCookbookId}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select an existing cookbook" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {allAvailableCookbooks.map(cb => (
-                                <SelectItem key={cb.id} value={cb.id}>{cb.name} {cb.user_id === 'guest' && '(Unsaved)'}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <p className="text-sm text-muted-foreground">No cookbooks found. Create one below!</p>
-                        )}
+                        <Select 
+                          value={isCreatingNewCookbook ? "create-new" : selectedCookbookId} 
+                          onValueChange={(value) => {
+                            if (value === "create-new") {
+                              setIsCreatingNewCookbook(true);
+                              setSelectedCookbookId(''); // Clear selected cookbook when creating new
+                            } else {
+                              setIsCreatingNewCookbook(false);
+                              setSelectedCookbookId(value);
+                            }
+                          }}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select an existing cookbook or create new" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {allAvailableCookbooks.length > 0 && (
+                              <p className="px-2 py-1 text-xs text-muted-foreground">Existing Cookbooks:</p>
+                            )}
+                            {allAvailableCookbooks.map(cb => (
+                              <SelectItem key={cb.id} value={cb.id}>{cb.name} {cb.user_id === 'guest' && '(Unsaved)'}</SelectItem>
+                            ))}
+                            <SelectItem value="create-new" className="font-semibold text-blue-500">
+                              <Plus className="h-4 w-4 mr-2 inline-block" /> Create New Cookbook...
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                         
-                        <div className="flex items-center gap-2">
-                          <Input
-                            placeholder="Or create new cookbook"
-                            value={newCookbookName}
-                            onChange={(e) => setNewCookbookName(e.target.value)}
-                            disabled={creatingCookbook}
-                          />
-                          <Button onClick={handleCreateNewCookbook} disabled={creatingCookbook}>
-                            {creatingCookbook ? 'Creating...' : 'Create'}
-                          </Button>
-                        </div>
+                        {isCreatingNewCookbook && (
+                          <div className="space-y-3 p-3 border rounded-lg bg-muted/20">
+                            <h4 className="font-semibold text-sm">New Cookbook Details:</h4>
+                            <Input
+                              placeholder="New cookbook name"
+                              value={newCookbookName}
+                              onChange={(e) => setNewCookbookName(e.target.value)}
+                              disabled={addingRecipesToCookbook}
+                            />
+                            <Textarea
+                              placeholder="Description (optional)"
+                              value={newCookbookDescription}
+                              onChange={(e) => setNewCookbookDescription(e.target.value)}
+                              disabled={addingRecipesToCookbook}
+                              rows={2}
+                            />
+                            <div className="flex items-center space-x-2">
+                              <Switch
+                                id="new-cookbook-public-scraper"
+                                checked={newCookbookIsPublic}
+                                onCheckedChange={setNewCookbookIsPublic}
+                                disabled={addingRecipesToCookbook}
+                              />
+                              <Label htmlFor="new-cookbook-public-scraper">
+                                {newCookbookIsPublic ? (
+                                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                                    <Globe className="h-4 w-4" /> Public
+                                  </span>
+                                ) : (
+                                  <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                                    <Lock className="h-4 w-4" /> Private
+                                  </span>
+                                )}
+                              </Label>
+                            </div>
+                          </div>
+                        )}
 
                         <Button 
                           onClick={handleAddSelectedToCookbook} 
-                          disabled={loading || !selectedCookbookId} 
+                          disabled={
+                            addingRecipesToCookbook || 
+                            (isCreatingNewCookbook && !newCookbookName.trim()) || 
+                            (!isCreatingNewCookbook && !selectedCookbookId) ||
+                            selectedRecipes.size === 0
+                          } 
                           className="w-full"
                         >
-                          {loading ? 'Adding...' : `Add ${selectedRecipes.size} to Cookbook`}
+                          {addingRecipesToCookbook ? 'Adding...' : `Add ${selectedRecipes.size} to Cookbook`}
                         </Button>
                       </div>
                     </DialogContent>
