@@ -4,6 +4,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import RecipeScraper from './RecipeScraper';
 import RecipeCard from './RecipeCard';
 import ShoppingList from './ShoppingList';
+import ShoppingListPDF from './ShoppingListPDF'; // Added this import
 import MealPlanner, { MealPlan } from './MealPlanner';
 import MealExporter from './MealExporter';
 import TopBar from './TopBar';
