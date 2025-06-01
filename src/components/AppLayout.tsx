@@ -119,7 +119,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="bg-gradient-to-r from-red-600 via-yellow-500 to-green-600 border-b border-black/20 sticky top-0 z-50 shadow-lg">
+      <header className="bg-gradient-to-r from-green-600 via-blue-600 to-purple-600 border-b border-black/20 sticky top-0 z-50 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`flex justify-between items-center h-16 ${isMobile ? 'gap-2' : 'gap-4'}`}>
             <div className="flex items-center gap-3">
@@ -133,7 +133,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                   {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
                 </Button>
               )}
-              <h1 className={`font-bold bg-gradient-to-r from-black via-red-800 to-black bg-clip-text text-transparent drop-shadow-lg ${isMobile ? 'text-xl' : 'text-3xl'} filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-white`}>
+              <h1 className={`font-bold bg-gradient-to-r from-white via-green-200 to-white bg-clip-text text-transparent drop-shadow-lg ${isMobile ? 'text-xl' : 'text-3xl'} filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] text-white`}>
                 MadRezipes
               </h1>
             </div>

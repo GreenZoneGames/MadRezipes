@@ -177,7 +177,7 @@ const MealExporter: React.FC<MealExporterProps> = ({ recipes, mealPlan, selected
           <Button 
             onClick={handleExport}
             disabled={exporting || planToExport.length === 0}
-            className="w-full bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground hover-lift transition-all duration-300 shadow-lg"
+            className="w-full bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600 text-primary-foreground hover-lift transition-all duration-300 shadow-lg"
           >
             {exporting ? (
               <>

@@ -110,8 +110,8 @@ const ThreadedMessage: React.FC<ThreadedMessageProps> = ({ message, onReply, dep
   };
 
   return (
-    <div className={`${depth > 0 ? 'ml-6 border-l-2 border-gray-200 pl-4' : ''}`}>
-      <Card className={`mb-3 ${!message.read ? 'border-blue-300 bg-blue-50/50' : ''}`}>
+    <div className={`${depth > 0 ? 'ml-6 border-l-2 border-border pl-4' : ''}`}>
+      <Card className={`mb-3 ${!message.read ? 'border-primary/50 bg-primary/5' : ''}`}>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -147,7 +147,7 @@ const ThreadedMessage: React.FC<ThreadedMessageProps> = ({ message, onReply, dep
           )}
           
           {user && user.id !== message.sender_id && (
-            <div className="mt-3 pt-2 border-t">
+            <div className="mt-3 pt-2 border-t border-border">
               <Button
                 variant="ghost"
                 size="sm"

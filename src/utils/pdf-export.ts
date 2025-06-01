@@ -55,6 +55,13 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
+  // Define new color palette for PDF
+  const primaryColor = [36, 128, 70]; // A health-conscious green (HSL: 142.1 76.2% 36.3%)
+  const textColor = [56, 63, 71]; // Dark blue-grey (HSL: 222.2 84% 4.9%)
+  const mutedTextColor = [108, 117, 125]; // Medium grey (HSL: 215.4 16.3% 46.9%)
+  const backgroundColor = [255, 255, 255]; // White
+  const borderColor = [214, 220, 225]; // Light grey for borders
+
   // Ensure mealPlan is not empty. If it is, try to generate a plan from allRecipes.
   const planToUse = mealPlan.length > 0 ? mealPlan : generateFullMonthPlan(allRecipes, selectedMonth);
 
@@ -63,15 +70,15 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
   }
 
   // Page 1: Calendar View
-  doc.setFillColor(41, 37, 36);
+  doc.setFillColor(...backgroundColor);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
   // Title
-  doc.setTextColor(251, 146, 60);
+  doc.setTextColor(...primaryColor);
   doc.setFontSize(24);
   doc.text('Monthly Meal Calendar', pageWidth / 2, 20, { align: 'center' });
 
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...mutedTextColor);
   doc.setFontSize(12);
   const currentDate = new Date();
   const monthName = selectedMonth || currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -85,13 +92,13 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
 
   // Draw calendar header
   doc.setFontSize(10);
-  doc.setTextColor(251, 146, 60);
+  doc.setTextColor(...primaryColor);
   daysOfWeek.forEach((day, index) => {
     doc.text(day, 20 + (index * cellWidth) + cellWidth / 2, startY, { align: 'center' });
   });
 
   // Draw calendar grid and meals
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...textColor);
 
   const year = currentDate.getFullYear();
   const monthIndex = new Date(Date.parse(selectedMonth + " 1, " + year)).getMonth(); // Get month index from selectedMonth string
@@ -105,7 +112,7 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
       const y = startY + 5 + week * cellHeight;
 
       // Draw cell border
-      doc.setDrawColor(100, 100, 100);
+      doc.setDrawColor(...borderColor);
       doc.rect(x, y, cellWidth, cellHeight);
 
       if (dayNumber > 0 && dayNumber <= daysInMonth) {
@@ -123,37 +130,37 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
           const meal = dayMeals.find(m => m.mealType === type);
           const icon = getMealIcon(type);
           const mealTitle = meal ? (meal.recipe.title.length > 15 ? meal.recipe.title.substring(0, 15) + '...' : meal.recipe.title) : 'No meal';
-          const textColor = meal ? [134, 239, 172] : [150, 150, 150];
+          const mealTextColor = meal ? primaryColor : mutedTextColor;
 
           if (mealY < y + cellHeight - 2) {
             doc.setFontSize(7);
-            doc.setTextColor(...textColor);
+            doc.setTextColor(...mealTextColor);
             doc.text(`${icon} ${mealTitle}`, x + 1, mealY);
             mealY += 4;
           }
         });
-        doc.setTextColor(255, 255, 255);
+        doc.setTextColor(...textColor);
       }
     }
   }
 
   // Legend
   doc.setFontSize(8);
-  doc.setTextColor(251, 146, 60);
+  doc.setTextColor(...primaryColor);
   doc.text('Meal Icons:', 20, pageHeight - 15);
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...textColor);
   doc.text('☀️ Breakfast  🍽️ Lunch  🌙 Dinner', 20, pageHeight - 10);
 
   // Page 2: Shopping List
   doc.addPage();
-  doc.setFillColor(41, 37, 36);
+  doc.setFillColor(...backgroundColor);
   doc.rect(0, 0, pageWidth, pageHeight, 'F');
 
-  doc.setTextColor(251, 146, 60);
+  doc.setTextColor(...primaryColor);
   doc.setFontSize(24);
   doc.text('Shopping List', pageWidth / 2, 20, { align: 'center' });
 
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(...mutedTextColor);
   doc.setFontSize(12);
   doc.text('Combined ingredients for all planned meals', pageWidth / 2, 30, { align: 'center' });
 
@@ -177,16 +184,16 @@ export const exportMealPlanToPDF = async (mealPlan: MealPlan[], selectedMonth: s
       xPos += columnWidth;
       if (xPos > pageWidth - columnWidth) {
         doc.addPage();
-        doc.setFillColor(41, 37, 36);
+        doc.setFillColor(...backgroundColor);
         doc.rect(0, 0, pageWidth, pageHeight, 'F');
         yPos = 20;
         xPos = 20;
       }
     }
 
-    doc.setTextColor(134, 239, 172);
+    doc.setTextColor(...primaryColor);
     doc.text('•', xPos, yPos);
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...textColor);
     doc.text(`${item.ingredient}${item.count > 1 ? ` (${item.count}x)` : ''}`, xPos + 5, yPos);
     yPos += 6;
   });

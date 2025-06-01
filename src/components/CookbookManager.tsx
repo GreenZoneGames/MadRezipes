@@ -132,7 +132,7 @@ const SortableRecipeItem: React.FC<{ recipe: Recipe; onClick: (recipe: Recipe) =
             e.stopPropagation(); 
             onRemove(recipe.id);
           }}
-          className="text-red-500 hover:text-red-700"
+          className="text-destructive hover:text-destructive/80"
         >
           <Trash2 className="h-3 w-3" />
         </Button>
@@ -615,19 +615,19 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-blue-500" />
+            <BookOpen className="h-5 w-5 text-primary" />
             My Cookbooks
           </div>
           <div className="flex items-center gap-2">
             {!user && guestCookbooks.length > 0 && (
-              <Button size="sm" onClick={handleSaveToAccount} className="bg-purple-500 hover:bg-purple-600">
+              <Button size="sm" onClick={handleSaveToAccount} className="bg-primary hover:bg-primary/90">
                 <Save className="h-4 w-4 mr-1" />
                 Save to Account
               </Button>
             )}
             <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
               <DialogTrigger asChild>
-                <Button size="sm" className="bg-blue-500 hover:bg-blue-600">
+                <Button size="sm" className="bg-primary hover:bg-primary/90">
                   <Plus className="h-4 w-4 mr-1" />
                   New
                 </Button>
@@ -682,11 +682,11 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
         <div className="space-y-3">
           {user && cookbookInvitations.length > 0 && (
             <div className="space-y-2 border-b pb-4 mb-4">
-              <h3 className="font-semibold text-sm flex items-center gap-1 text-orange-500">
+              <h3 className="font-semibold text-sm flex items-center gap-1 text-primary">
                 <UserPlus className="h-4 w-4" /> Cookbook Invitations ({cookbookInvitations.length})
               </h3>
               {cookbookInvitations.map(invite => (
-                <div key={invite.id} className="flex items-center justify-between p-2 border rounded bg-orange-50/50">
+                <div key={invite.id} className="flex items-center justify-between p-2 border rounded bg-primary/5">
                   <span className="text-sm font-medium">
                     "{invite.cookbook_name}" from {invite.invited_by_username}
                   </span>
@@ -695,7 +695,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                       variant="outline"
                       size="sm"
                       onClick={() => acceptCookbookInvitation(invite.id)}
-                      className="text-green-600 hover:text-green-800 border-green-300"
+                      className="text-primary hover:text-primary/80 border-primary/50"
                     >
                       <Check className="h-3 w-3" />
                     </Button>
@@ -703,7 +703,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                       variant="outline"
                       size="sm"
                       onClick={() => rejectCookbookInvitation(invite.id)}
-                      className="text-red-600 hover:text-red-800 border-red-300"
+                      className="text-destructive hover:text-destructive/80 border-destructive/50"
                     >
                       <X className="h-3 w-3" />
                     </Button>
@@ -725,7 +725,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                 {currentSelectedCookbook ? (
                   <span className="flex items-center gap-2">
                     {currentSelectedCookbook.is_public ? (
-                      <Globe className="h-4 w-4 text-green-500" />
+                      <Globe className="h-4 w-4 text-primary" />
                     ) : (
                       <Lock className="h-4 w-4 text-muted-foreground" />
                     )}
@@ -768,7 +768,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                     </Badge>
                   )}
                   {currentSelectedCookbook?.is_owner && (
-                    <Badge variant="outline" className="text-xs bg-blue-100 text-blue-700">Owner</Badge>
+                    <Badge variant="outline" className="text-xs bg-primary/20 text-primary">Owner</Badge>
                   )}
                   {currentSelectedCookbook?.is_collaborator && (
                     <Badge variant="outline" className="text-xs bg-green-100 text-green-700">Collaborator</Badge>
@@ -793,7 +793,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                   {canDeleteCookbook && currentSelectedCookbook && (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </AlertDialogTrigger>
@@ -865,7 +865,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                 <Button 
                   onClick={handlePlanWithCookbook} 
                   disabled={!currentSelectedCookbook || isLoadingCurrentRecipes}
-                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+                  className="flex-1 bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600"
                 >
                   <CalendarDays className="h-4 w-4 mr-2" />
                   Plan with this Cookbook
@@ -928,7 +928,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                 <Button 
                   onClick={() => setShowManageRecipesDialog(true)} 
                   disabled={isLoadingCurrentRecipes}
-                  className="w-full mt-4 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+                  className="w-full mt-4 bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600"
                 >
                   <BookOpen className="h-4 w-4 mr-2" />
                   Open Selected Cookbook
@@ -1054,12 +1054,14 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                     <div className="flex items-center gap-2">
                       <span className="font-medium text-sm">{collab.users.username || collab.users.email}</span>
                       <Badge variant="secondary" className="text-xs">{collab.status}</Badge>
-                      <Badge variant="outline" className="text-xs">{collab.role}</Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {collab.role === 'editor' ? 'Editor' : collab.role}
+                      </Badge>
                     </div>
                     {canManageCollaborators && collab.user_id !== user?.id && ( // Cannot remove self via this dialog
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700">
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive/80">
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </AlertDialogTrigger>

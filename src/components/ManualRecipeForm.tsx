@@ -127,7 +127,7 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
     <Card className="w-full hover-lift bg-card/50 backdrop-blur-sm border-border/50 animate-slide-up">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-foreground">
-          <UtensilsCrossed className="h-5 w-5 text-purple-500" />
+          <UtensilsCrossed className="h-5 w-5 text-primary" />
           Manually Add Recipe
         </CardTitle>
         <p className="text-sm text-muted-foreground">
@@ -340,7 +340,7 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
               </div>
             )}
 
-            <Button type="submit" className="w-full bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600" disabled={isSubmitting}>
+            <Button type="submit" className="w-full bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Save className="h-4 w-4 mr-2 animate-spin" />

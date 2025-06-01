@@ -56,13 +56,20 @@ export const exportCookbookRecipesToPDF = async (recipes: Recipe[], cookbookName
   const margin = 15;
   const lineHeight = 5;
 
+  // Define new color palette for PDF
+  const primaryColor = [36, 128, 70]; // A health-conscious green (HSL: 142.1 76.2% 36.3%)
+  const textColor = [56, 63, 71]; // Dark blue-grey (HSL: 222.2 84% 4.9%)
+  const mutedTextColor = [108, 117, 125]; // Medium grey (HSL: 215.4 16.3% 46.9%)
+  const backgroundColor = [255, 255, 255]; // White
+  const cardBackgroundColor = [248, 249, 250]; // Light grey for card backgrounds
+
   const addPageHeader = (title: string, subtitle: string) => {
-    doc.setFillColor(41, 37, 36);
+    doc.setFillColor(...backgroundColor);
     doc.rect(0, 0, pageWidth, pageHeight, 'F');
-    doc.setTextColor(251, 146, 60);
+    doc.setTextColor(...primaryColor);
     doc.setFontSize(22);
     doc.text(title, pageWidth / 2, 15, { align: 'center' });
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...mutedTextColor);
     doc.setFontSize(10);
     doc.text(subtitle, pageWidth / 2, 22, { align: 'center' });
     yPos = 30;
@@ -71,7 +78,7 @@ export const exportCookbookRecipesToPDF = async (recipes: Recipe[], cookbookName
   addPageHeader(`${cookbookName} Recipes`, `Generated on ${new Date().toLocaleDateString()}`);
 
   if (recipes.length === 0) {
-    doc.setTextColor(255, 255, 255);
+    doc.setTextColor(...textColor);
     doc.setFontSize(12);
     doc.text('No recipes found in this cookbook.', pageWidth / 2, yPos + 20, { align: 'center' });
   } else {
@@ -82,13 +89,13 @@ export const exportCookbookRecipesToPDF = async (recipes: Recipe[], cookbookName
       }
 
       // Recipe Title
-      doc.setTextColor(251, 146, 60);
+      doc.setTextColor(...primaryColor);
       doc.setFontSize(16);
       doc.text(recipe.title, margin, yPos);
       yPos += lineHeight * 1.5;
 
       // Recipe Meta (Cook Time, Servings, Meal Type, URL)
-      doc.setTextColor(150, 150, 150);
+      doc.setTextColor(...mutedTextColor);
       doc.setFontSize(9);
       let metaText = '';
       if (recipe.cook_time) metaText += `🕒 ${recipe.cook_time}  `;
@@ -119,7 +126,7 @@ export const exportCookbookRecipesToPDF = async (recipes: Recipe[], cookbookName
       }
 
       // Ingredients
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...textColor);
       doc.setFontSize(12);
       doc.text('Ingredients:', margin, yPos);
       yPos += lineHeight;
@@ -127,8 +134,8 @@ export const exportCookbookRecipesToPDF = async (recipes: Recipe[], cookbookName
       recipe.ingredients.forEach(ingredient => {
         if (yPos + lineHeight > pageHeight - margin) {
           doc.addPage();
-          addPageHeader(`${cookbookName} Recipes (cont.)`, `Generated on ${new Date().toLocaleDateString()}`);
-          doc.setTextColor(255, 255, 255);
+          addPageHeader(`${cookbookName} Recipes (cont.):`, `Generated on ${new Date().toLocaleDateString()}`);
+          doc.setTextColor(...textColor);
           doc.setFontSize(12);
           doc.text('Ingredients (cont.):', margin, yPos);
           yPos += lineHeight;
@@ -140,7 +147,7 @@ export const exportCookbookRecipesToPDF = async (recipes: Recipe[], cookbookName
       yPos += lineHeight; // Add extra space after ingredients
 
       // Instructions
-      doc.setTextColor(255, 255, 255);
+      doc.setTextColor(...textColor);
       doc.setFontSize(12);
       doc.text('Instructions:', margin, yPos);
       yPos += lineHeight;
@@ -151,8 +158,8 @@ export const exportCookbookRecipesToPDF = async (recipes: Recipe[], cookbookName
         splitText.forEach((line: string) => {
           if (yPos + lineHeight > pageHeight - margin) {
             doc.addPage();
-            addPageHeader(`${cookbookName} Recipes (cont.)`, `Generated on ${new Date().toLocaleDateString()}`);
-            doc.setTextColor(255, 255, 255);
+            addPageHeader(`${cookbookName} Recipes (cont.):`, `Generated on ${new Date().toLocaleDateString()}`);
+            doc.setTextColor(...textColor);
             doc.setFontSize(12);
             doc.text('Instructions (cont.):', margin, yPos);
             yPos += lineHeight;

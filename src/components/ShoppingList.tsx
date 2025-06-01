@@ -151,13 +151,13 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
       <Card className="w-full hover-lift bg-card/50 backdrop-blur-sm border-border/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-foreground">
-            <ShoppingCart className="h-5 w-5 text-orange-500" />
+            <ShoppingCart className="h-5 w-5 text-primary" />
             Shopping List
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 bg-gradient-to-br from-orange-50/30 to-red-50/30 rounded-lg border border-dashed border-orange-200">
-            <ShoppingCart className="h-12 w-12 text-orange-400 mx-auto mb-2" />
+          <div className="text-center py-8 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg border border-dashed border-border">
+            <ShoppingCart className="h-12 w-12 text-primary mx-auto mb-2" />
             <p className="text-muted-foreground animate-fade-in">
               🍳 Add some delicious recipes or plan meals to generate your shopping list!
             </p>
@@ -175,9 +175,9 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
     <Card className="w-full hover-lift bg-card/50 backdrop-blur-sm border-border/50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-foreground">
-          <ShoppingCart className="h-5 w-5 text-orange-500" />
+          <ShoppingCart className="h-5 w-5 text-primary" />
           Shopping List
-          <Badge variant="secondary" className="bg-orange-100 text-orange-700 border-orange-300">
+          <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/30">
             🥕 {uniqueIngredients.length} items
           </Badge>
           <button
@@ -195,7 +195,7 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div 
-                className="bg-gradient-to-r from-green-400 to-emerald-500 h-2 rounded-full transition-all duration-300"
+                className="bg-gradient-to-r from-primary to-emerald-500 h-2 rounded-full transition-all duration-300"
                 style={{ width: `${progressPercentage}%` }}
               ></div>
             </div>
@@ -212,17 +212,17 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
                   {category.charAt(0).toUpperCase() + category.slice(1)} ({items.length})
                 </div>
                 {items.map((item, index) => (
-                  <div key={`${category}-${index}`} className="flex items-center space-x-3 p-3 ml-4 rounded-lg hover:bg-gradient-to-r hover:from-orange-50/30 hover:to-red-50/30 transition-all duration-200">
+                  <div key={`${category}-${index}`} className="flex items-center space-x-3 p-3 ml-4 rounded-lg hover:bg-gradient-to-r hover:from-primary/5 hover:to-secondary/5 transition-all duration-200">
                     <Checkbox 
                       checked={checkedItems.has(item.ingredient)}
                       onCheckedChange={() => handleToggleItem(item.ingredient)}
-                      className="border-orange-300"
+                      className="border-primary"
                     />
                     <span className="text-lg">{getIngredientIcon(item.ingredient)}</span>
                     <label className={`text-sm font-medium cursor-pointer flex-1 ${
                       checkedItems.has(item.ingredient) 
                         ? 'line-through text-muted-foreground' 
-                        : 'text-foreground hover:text-orange-600'
+                        : 'text-foreground hover:text-primary'
                     }`}>
                       {item.ingredient}
                       {item.amount > 1 && (
@@ -237,17 +237,17 @@ const ShoppingList: React.FC<ShoppingListProps> = ({ recipes, onShoppingListChan
             ))
           ) : (
             ingredientsWithAmounts.map((item, index) => (
-              <div key={index} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gradient-to-r hover:from-orange-50/30 hover:to-red-50/30 transition-all duration-200">
+              <div key={index} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gradient-to-r hover:from-primary/5 hover:to-secondary/5 transition-all duration-200">
                 <Checkbox 
                   checked={checkedItems.has(item.ingredient)}
                   onCheckedChange={() => handleToggleItem(item.ingredient)}
-                  className="border-orange-300"
+                  className="border-primary"
                 />
                 <span className="text-lg">{getIngredientIcon(item.ingredient)}</span>
                 <label className={`text-sm font-medium cursor-pointer flex-1 ${
                   checkedItems.has(item.ingredient) 
                     ? 'line-through text-muted-foreground' 
-                    : 'text-foreground hover:text-orange-600'
+                    : 'text-foreground hover:text-primary'
                 }`}>
                   {item.ingredient}
                   {item.amount > 1 && (

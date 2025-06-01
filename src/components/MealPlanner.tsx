@@ -247,7 +247,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
       <Card className="w-full hover-lift bg-card/50 backdrop-blur-sm border-border/50 animate-slide-up">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-foreground">
-            <ChefHat className="h-5 w-5 text-blue-500" />
+            <ChefHat className="h-5 w-5 text-primary" />
             Meal Planner
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -294,8 +294,8 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
                 Loading recipes from cookbook...
               </div>
             ) : recipesToPlan.length === 0 ? (
-              <div className="text-center py-6 bg-gradient-to-br from-orange-50/30 to-red-50/30 rounded-lg border border-dashed border-orange-200">
-                <ChefHat className="h-12 w-12 text-orange-400 mx-auto mb-2" />
+              <div className="text-center py-6 bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg border border-dashed border-border">
+                <ChefHat className="h-12 w-12 text-primary mx-auto mb-2" />
                 <p className="text-muted-foreground">
                   The selected cookbook has no recipes. Add some to start meal planning!
                 </p>
@@ -317,7 +317,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
                 <Button 
                   onClick={generateRandomPlan}
                   disabled={!selectedMonth || recipesToPlan.length === 0}
-                  className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white hover-lift transition-all duration-300"
+                  className="bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600 text-primary-foreground hover-lift transition-all duration-300"
                 >
                   <Shuffle className="h-4 w-4 mr-1" />
                   🎲 Generate Full Month
@@ -350,7 +350,7 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
                 <Button 
                   onClick={handleSaveMealPlan}
                   disabled={savingPlan || !user}
-                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white hover-lift transition-all duration-300 shadow-lg"
+                  className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white hover-lift transition-all duration-300 shadow-lg"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   {savingPlan ? 'Saving...' : 'Save Current Plan'}

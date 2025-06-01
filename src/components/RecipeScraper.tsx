@@ -216,7 +216,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
       <Card className="w-full hover-lift bg-card/50 backdrop-blur-sm border-border/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-foreground">
-            <ChefHat className="h-5 w-5 text-orange-500" />
+            <ChefHat className="h-5 w-5 text-primary" />
             Recipe Scraper
           </CardTitle>
           <p className="text-sm text-muted-foreground">
@@ -235,7 +235,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
             <Button 
               onClick={handleScrape} 
               disabled={loading}
-              className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+              className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
             >
               {loading ? (
                 <>
@@ -258,7 +258,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <ChefHat className="h-5 w-5 text-green-500" />
+                <ChefHat className="h-5 w-5 text-primary" />
                 Found {scrapedRecipes.length} Recipe{scrapedRecipes.length > 1 ? 's' : ''}!
               </div>
               <div className="flex items-center gap-2">
@@ -273,7 +273,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                   <Dialog open={showAddRecipeToCookbookDialog} onOpenChange={setShowAddRecipeToCookbookDialog}>
                     <DialogTrigger asChild>
                       <Button
-                        className="bg-gradient-to-r from-green-500 to-emerald-500"
+                        className="bg-gradient-to-r from-primary to-primary/80"
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add {selectedRecipes.size} Recipe{selectedRecipes.size > 1 ? 's' : ''}
@@ -379,15 +379,15 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                   key={recipe.id} 
                   className={`border rounded-lg p-4 transition-all ${
                     selectedRecipes.has(recipe.id) 
-                      ? 'border-green-300 bg-green-50/50' 
-                      : 'border-border/50 hover:border-orange-300'
+                      ? 'border-primary bg-primary/10' 
+                      : 'border-border/50 hover:border-primary/50'
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <Checkbox
                       checked={selectedRecipes.has(recipe.id)}
                       onCheckedChange={() => toggleRecipeSelection(recipe.id)}
-                      className="mt-1"
+                      className="mt-1 border-primary"
                     />
                     {recipe.image && (
                       <img 
@@ -403,7 +403,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                       <h4 className="font-semibold text-lg mb-2 flex items-center gap-2">
                         🍽️ {recipe.title}
                         {selectedRecipes.has(recipe.id) && (
-                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <CheckCircle className="h-4 w-4 text-primary" />
                         )}
                       </h4>
                       
@@ -446,7 +446,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                         <div className="max-h-16 overflow-y-auto">
                           {recipe.ingredients.slice(0, 3).map((ingredient, idx) => (
                             <div key={idx} className="flex items-center gap-1">
-                              <span className="text-orange-500">•</span> {ingredient}
+                              <span className="text-primary">•</span> {ingredient}
                             </div>
                           ))}
                           {recipe.ingredients.length > 3 && (

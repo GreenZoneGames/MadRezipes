@@ -198,18 +198,18 @@ const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
         {pendingRequests.length > 0 && (
           <div className="space-y-2 border-t pt-4">
             <h3 className="font-semibold text-sm flex items-center gap-1">
-              <UserPlus className="h-4 w-4 text-orange-500" />
+              <UserPlus className="h-4 w-4 text-primary" />
               Incoming Requests
             </h3>
             {pendingRequests.map(request => (
-              <div key={request.id} className="flex items-center justify-between p-2 border rounded bg-orange-50/50">
+              <div key={request.id} className="flex items-center justify-between p-2 border rounded bg-primary/5">
                 <span className="text-sm font-medium">{request.email}</span>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleAcceptRequest(request.id, request.user_id, request.email)}
-                    className="text-green-600 hover:text-green-800 border-green-300"
+                    className="text-primary hover:text-primary/80 border-primary/50"
                   >
                     <Check className="h-3 w-3" />
                   </Button>
@@ -217,7 +217,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
                     variant="outline"
                     size="sm"
                     onClick={() => handleRejectRequest(request.id, request.email)}
-                    className="text-red-600 hover:text-red-800 border-red-300"
+                    className="text-destructive hover:text-destructive/80 border-destructive/50"
                   >
                     <X className="h-3 w-3" />
                   </Button>
@@ -246,7 +246,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
         
         <div className="space-y-2 border-t pt-4">
           <h3 className="font-semibold text-sm flex items-center gap-1">
-            <Users className="h-4 w-4 text-green-500" />
+            <Users className="h-4 w-4 text-primary" />
             My Friends
           </h3>
           {acceptedFriends.length === 0 ? (
@@ -258,7 +258,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
               <div key={friend.id} className="flex items-center justify-between p-2 border rounded">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{friend.username || friend.email}</span>
-                  <Badge variant="default" className="text-xs">
+                  <Badge variant="default" className="text-xs bg-primary/20 text-primary">
                     Accepted
                   </Badge>
                 </div>
@@ -275,7 +275,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
                     variant="ghost"
                     size="sm"
                     onClick={() => handleRemoveFriend(friend.id, friend.email)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-destructive hover:text-destructive/80"
                   >
                     <Trash2 className="h-3 w-3" />
                   </Button>
@@ -288,7 +288,7 @@ const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
         {/* Friend Suggestions Section */}
         <div className="space-y-2 border-t pt-4">
           <h3 className="font-semibold text-sm flex items-center gap-1">
-            <UserPlus className="h-4 w-4 text-purple-500" />
+            <UserPlus className="h-4 w-4 text-primary" />
             Friend Suggestions
           </h3>
           {isLoadingSuggestions ? (
@@ -299,14 +299,14 @@ const FriendsList: React.FC<FriendsListProps> = ({ onOpenDm }) => {
           ) : suggestedUsers && suggestedUsers.length > 0 ? (
             <div className="space-y-2">
               {suggestedUsers.map(suggestedUser => (
-                <div key={suggestedUser.id} className="flex items-center justify-between p-2 border rounded bg-purple-50/50">
+                <div key={suggestedUser.id} className="flex items-center justify-between p-2 border rounded bg-primary/5">
                   <span className="text-sm font-medium">{suggestedUser.username || suggestedUser.email}</span>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleAddFriend(suggestedUser.email)}
                     disabled={loading}
-                    className="text-purple-600 hover:text-purple-800 border-purple-300"
+                    className="text-primary hover:text-primary/80 border-primary/50"
                   >
                     <UserPlus className="h-3 w-3" />
                   </Button>

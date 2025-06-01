@@ -41,12 +41,12 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
           <title>${recipe.title}</title>
           <style>
             body { font-family: sans-serif; margin: 20px; color: #333; }
-            h1 { color: #e67e22; font-size: 28px; margin-bottom: 15px; }
-            h2 { color: #3498db; font-size: 20px; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+            h1 { color: #28a745; font-size: 28px; margin-bottom: 15px; } /* Primary green */
+            h2 { color: #007bff; font-size: 20px; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; } /* Blue for secondary headings */
             img { max-width: 100%; height: auto; border-radius: 8px; margin-bottom: 20px; }
             ul, ol { list-style-position: inside; padding-left: 0; margin-bottom: 20px; }
             li { margin-bottom: 8px; line-height: 1.5; }
-            .meta { font-size: 14px; color: #777; margin-bottom: 20px; }
+            .meta { font-size: 14px; color: #6c757d; margin-bottom: 20px; } /* Muted grey */
             .meta span { margin-right: 15px; }
             .category-badge { 
               display: inline-block; 
@@ -56,16 +56,16 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
               font-weight: bold; 
               margin-right: 5px; 
               margin-bottom: 5px;
-              background-color: #f0f0f0; /* Default light background */
-              color: #555; /* Default dark text */
+              background-color: #e9ecef; /* Light grey */
+              color: #495057; /* Dark grey */
             }
-            .category-proteins { background-color: #ffe0e0; color: #c0392b; }
-            .category-vegetables { background-color: #e0ffe0; color: #27ae60; }
-            .category-fruits { background-color: #fffbe0; color: #f39c12; }
-            .category-grains { background-color: #f5e6cc; color: #d35400; }
-            .category-dairy { background-color: #e0f0ff; color: #2980b9; }
-            .category-spices { background-color: #f0e0ff; color: #8e44ad; }
-            .category-other { background-color: #e0e0e0; color: #7f8c8d; }
+            .category-proteins { background-color: #f8d7da; color: #721c24; } /* Light red */
+            .category-vegetables { background-color: #d4edda; color: #155724; } /* Light green */
+            .category-fruits { background-color: #fff3cd; color: #856404; } /* Light yellow */
+            .category-grains { background-color: #fef8e0; color: #8a6d3b; } /* Light amber */
+            .category-dairy { background-color: #cce5ff; color: #004085; } /* Light blue */
+            .category-spices { background-color: #e2d9f3; color: #4b0082; } /* Light purple */
+            .category-other { background-color: #e9ecef; color: #495057; } /* Light grey */
             @media print {
               body { margin: 0; }
               .no-print { display: none; }
@@ -146,7 +146,7 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
           variant="default"
           size="sm"
           onClick={() => onAddToShoppingList(recipe.ingredients)}
-          className="flex-1 bg-green-600 hover:bg-green-700"
+          className="flex-1 bg-primary hover:bg-primary/90"
         >
           🛒 Add to List
         </Button>
@@ -185,7 +185,7 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
         <Button
           variant="outline"
           size="sm"
-          className="flex-1 flex items-center gap-1 text-purple-500 hover:text-purple-600 border-purple-300"
+          className="flex-1 flex items-center gap-1 text-primary hover:text-primary/80 border-primary/50"
           onClick={() => setShowCopyCookbookDialog(true)}
         >
           <Copy className="h-4 w-4" />
