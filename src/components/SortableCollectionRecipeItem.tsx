@@ -42,6 +42,7 @@ const SortableCollectionRecipeItem: React.FC<SortableCollectionRecipeItemProps> 
   onRecipeAdded,
   onRemove, // Destructure new prop
 }) => {
+  // This comment is added to trigger a re-compilation.
   const {
     attributes,
     listeners,
