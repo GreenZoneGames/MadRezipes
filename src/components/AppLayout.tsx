@@ -14,6 +14,23 @@ import { Button } from '@/components/ui/button';
 import { Menu, X } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import MobileNavMenu from './MobileNavMenu'; // Import the new component
+import SortableCollectionRecipeItem from './SortableCollectionRecipeItem'; // Import the new sortable item
+
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragOverlay,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { arrayMove } from '@/utils/array-utils';
+
 
 interface Recipe {
   id: string;
@@ -62,6 +79,12 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   const [localRecipes, setLocalRecipes] = useState<Recipe[]>(recipes); // Renamed to avoid prop drilling issues
   const [localMealPlan, setLocalMealPlan] = useState<MealPlan[]>(mealPlan); // Renamed
   const [localShoppingList, setLocalShoppingList] = useState<string[]>(availableIngredients); // Renamed
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor),
+  );
 
   // Sync props to local state if they change from parent (Index.tsx)
   React.useEffect(() => {
@@ -115,6 +138,31 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   const handleRecipeGenerated = (recipe: Recipe) => {
     setLocalRecipes(prev => [...prev, recipe]);
     onRecipeGenerated(recipe); // Pass up to Index.tsx
+  };
+
+  const handleDragEnd = (event: any) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      setLocalRecipes((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+    setActiveId(null);
+  };
+
+  const handleDragStart = (event: any) => {
+    setActiveId(event.active.id);
+  };
+
+  const handleDragCancel = () => {
+    setActiveId(null);
+  };
+
+  const getActiveRecipe = (activeId: string | null) => {
+    return localRecipes.find((recipe) => recipe.id === activeId);
   };
 
   return (
@@ -192,17 +240,38 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                   <p className="text-sm mt-2">Enter a recipe URL above to extract the exact recipe details.</p>
                 </div>
               ) : (
-                <div className="grid gap-4">
-                  {localRecipes.map(recipe => (
-                    <RecipeCard
-                      key={recipe.id}
-                      recipe={recipe}
-                      onAddToShoppingList={addToShoppingList}
-                      onRecipeAdded={handleRecipeAdded}
-                      showFullDetails={false} // Ensure condensed view for collection
-                    />
-                  ))}
-                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                  onDragCancel={handleDragCancel}
+                >
+                  <SortableContext
+                    items={localRecipes.map(r => r.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="grid gap-4">
+                      {localRecipes.map(recipe => (
+                        <SortableCollectionRecipeItem
+                          key={recipe.id}
+                          recipe={recipe}
+                          onAddToShoppingList={addToShoppingList}
+                          onRecipeAdded={handleRecipeAdded}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                  <DragOverlay>
+                    {activeId ? (
+                      <div className="p-2 border rounded-lg bg-background/80 shadow-lg">
+                        <span className="text-sm font-medium truncate">
+                          {getActiveRecipe(activeId)?.title}
+                        </span>
+                      </div>
+                    ) : null}
+                  </DragOverlay>
+                </DndContext>
               )}
             </div>
           </div>
