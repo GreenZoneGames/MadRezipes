@@ -77,21 +77,27 @@ const extractRecipesFromHtml = (html: string, url: string) => {
   if (recipes.length === 0) {
     const doc = new DOMParser().parseFromString(html, 'text/html');
     if (doc) {
-      const titleElement = doc.querySelector('h1.entry-title, h1.recipe-title, .wprm-recipe-name');
+      // Refined title selector
+      const titleElement = doc.querySelector('h1.entry-title, h1.recipe-title, .wprm-recipe-name, h1[itemprop="name"]');
       const title = titleElement?.textContent?.trim() || 'Untitled Recipe (HTML Scrape)';
 
       // Refined selectors for ingredients and instructions
-      const ingredientsList = doc.querySelector('.wprm-recipe-ingredients, .tasty-recipes-ingredients, .recipe-ingredients, .ingredients');
-      const ingredients = Array.from(ingredientsList?.querySelectorAll('li, .wprm-recipe-ingredient, .ingredient') || []) // Added .ingredient
-        .map(li => li.textContent?.trim())
+      // Prioritize specific recipe plugin containers, then more general ones
+      const ingredientsList = doc.querySelector(
+        '.wprm-recipe-ingredients-container, .wprm-recipe-ingredients, .tasty-recipes-ingredients, .recipe-ingredients, .ingredients, [itemprop="recipeIngredient"]'
+      );
+      const ingredients = Array.from(ingredientsList?.querySelectorAll('li, .wprm-recipe-ingredient, .ingredient, [itemprop="recipeIngredient"]') || [])
+        .map(el => el.textContent?.trim())
         .filter(Boolean);
 
-      const instructionsList = doc.querySelector('.wprm-recipe-instructions, .tasty-recipes-instructions, .recipe-instructions, .instructions');
-      const instructions = Array.from(instructionsList?.querySelectorAll('li, .wprm-recipe-instruction, .instruction') || []) // Added .instruction
-        .map(li => li.textContent?.trim())
+      const instructionsList = doc.querySelector(
+        '.wprm-recipe-instructions-container, .wprm-recipe-instructions, .tasty-recipes-instructions, .recipe-instructions, .instructions, [itemprop="recipeInstructions"]'
+      );
+      const instructions = Array.from(instructionsList?.querySelectorAll('li, .wprm-recipe-instruction, .instruction, [itemprop="recipeInstructions"] p') || [])
+        .map(el => el.textContent?.trim())
         .filter(Boolean);
 
-      const imageElement = doc.querySelector('img.wp-post-image, .wprm-recipe-image img, .tasty-recipes-image img');
+      const imageElement = doc.querySelector('img.wp-post-image, .wprm-recipe-image img, .tasty-recipes-image img, img[itemprop="image"]');
       const image = imageElement?.getAttribute('src') || null;
 
       if (ingredients.length > 0 || instructions.length > 0) {
