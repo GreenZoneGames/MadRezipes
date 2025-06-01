@@ -198,7 +198,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [guestRecipes]);
 
-  const loadCookbooks = async (userId: string) => {
+  const loadCookbooks = useCallback(async (userId: string) => {
     try {
       // Fetch cookbooks owned by the user
       const { data: ownedCookbooks, error: ownedError } = await supabase
@@ -247,7 +247,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (error) {
       console.error('Load cookbooks error:', error);
     }
-  };
+  }, [selectedCookbook]); // Added selectedCookbook to dependencies
 
   const loadFriends = async (userId: string) => {
     try {
@@ -465,12 +465,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               setUser(null);
             } else {
               setUser(newUserData);
-              loadCookbooks(newUserData.id);
+              await loadCookbooks(newUserData.id); // Ensure cookbooks are loaded
               loadFriends(newUserData.id);
               loadMealPlans(newUserData.id); // Load meal plans on login
               loadCookbookInvitations(newUserData.id); // Load invitations on login
               if (guestCookbooks.length > 0 || guestRecipes.length > 0) {
-                syncGuestDataToUser();
+                await syncGuestDataToUser(); // Wait for sync to complete
+                await loadCookbooks(newUserData.id); // Reload cookbooks after sync
               }
             }
           }
@@ -480,13 +481,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setUser(null);
         } else if (userData) {
           setUser(userData);
-          loadCookbooks(userData.id);
+          await loadCookbooks(userData.id); // Ensure cookbooks are loaded
           loadFriends(userData.id);
           loadMealPlans(userData.id); // Load meal plans on login
           loadCookbookInvitations(userData.id); // Load invitations on login
           // Sync guest data after user is set and their data is loaded
           if (guestCookbooks.length > 0 || guestRecipes.length > 0) {
-            syncGuestDataToUser();
+            await syncGuestDataToUser(); // Wait for sync to complete
+            await loadCookbooks(userData.id); // Reload cookbooks after sync
           }
         }
       } else {
@@ -501,7 +503,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // If there's an error checking user, assume logged out state
       setUser(null);
     }
-  }, [guestCookbooks, guestRecipes, syncGuestDataToUser, selectedCookbook, loadMealPlans, loadCookbookInvitations]); // Added selectedCookbook to dependencies
+  }, [guestCookbooks, guestRecipes, syncGuestDataToUser, loadMealPlans, loadCookbookInvitations, loadCookbooks]); // Added loadCookbooks to dependencies
 
   useEffect(() => {
     checkUser();
@@ -678,7 +680,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user) {
       // Guest mode: remove from local storage
       setGuestCookbooks(prev => prev.filter(cb => cb.id !== cookbookId));
-      setGuestRecipes(prev => prev.filter(recipe => recipe.cookbook_id !== cookbookId));
+      setGuestRecipes(prev => prev.filter(recipe => recipe.cookbook_id === cookbookId));
       if (selectedCookbook?.id === cookbookId) {
         setSelectedCookbook(null); // Deselect if the deleted one was selected
       }
@@ -835,6 +837,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         description: error.message || 'An error occurred while copying the cookbook.',
         variant: 'destructive',
       });
+      throw error;
     }
   };
 
