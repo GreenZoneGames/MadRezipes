@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, MessageCircle } from 'lucide-react';
+import { User, LogIn, MessageCircle, BookOpen } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -8,14 +8,21 @@ import { toast } from '@/components/ui/use-toast';
 import MessageInbox from './MessageInbox';
 import UserAuth from './UserAuth';
 import UserProfileDialog from './UserProfileDialog';
+import MyCookbooksDialog from './MyCookbooksDialog'; // Import the new dialog
 import { cn } from '@/lib/utils'; // Import cn for conditional class names
 
-const TopBar: React.FC = () => {
+interface TopBarProps {
+  onRecipeRemoved: (id: string) => void; // Prop to pass to MyCookbooksDialog
+  setActiveTab: (tab: string) => void; // Prop to pass to MyCookbooksDialog
+}
+
+const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab }) => {
   const { user } = useAppContext();
   const isMobile = useIsMobile();
   const [showAuth, setShowAuth] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showCookbooksDialog, setShowCookbooksDialog] = useState(false); // New state for cookbooks dialog
   const [hasShownLoginToast, setHasShownLoginToast] = useState(false); // New state to track toast display
 
   useEffect(() => {
@@ -48,6 +55,10 @@ const TopBar: React.FC = () => {
     }
   };
 
+  const handleCookbooksClick = () => {
+    setShowCookbooksDialog(true);
+  };
+
   return (
     <div className="flex items-center gap-3">
       {/* Message Inbox Button - Always present, behavior changes based on login */}
@@ -64,6 +75,17 @@ const TopBar: React.FC = () => {
         {!isMobile && <span className="ml-1">Messages</span>}
       </Button>
       
+      {/* My Cookbooks Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleCookbooksClick}
+        className="text-white hover:text-white hover:bg-white/10 border border-white/20 hover:border-white/40"
+      >
+        <BookOpen className="h-4 w-4" />
+        {!isMobile && <span className="ml-1">Cookbooks</span>}
+      </Button>
+
       {/* User Profile / Sign In Button */}
       {user ? (
         <div className={cn(
@@ -98,6 +120,12 @@ const TopBar: React.FC = () => {
       <UserAuth open={showAuth} onOpenChange={setShowAuth} />
       <MessageInbox open={showMessages} onOpenChange={setShowMessages} />
       <UserProfileDialog open={showProfile} onOpenChange={setShowProfile} />
+      <MyCookbooksDialog 
+        open={showCookbooksDialog} 
+        onOpenChange={setShowCookbooksDialog} 
+        onRecipeRemoved={onRecipeRemoved}
+        setActiveTab={setActiveTab}
+      />
     </div>
   );
 };

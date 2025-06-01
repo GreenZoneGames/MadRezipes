@@ -26,7 +26,13 @@ interface Recipe {
   cookbook_id?: string; // Changed to snake_case
 }
 
-const AppLayout: React.FC = () => {
+interface AppLayoutProps {
+  children: React.ReactNode;
+  onRecipeRemoved: (id: string) => void;
+  setActiveTab: (tab: string) => void;
+}
+
+const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setActiveTab }) => {
   const { sidebarOpen, toggleSidebar } = useAppContext();
   const isMobile = useIsMobile();
   const [recipes, setRecipes] = useState<Recipe[]>([]); // This state will now primarily hold scraped/generated recipes before DB save, and then be updated by DB changes.
@@ -47,10 +53,13 @@ const AppLayout: React.FC = () => {
     });
   };
 
-  const handleRecipeRemoved = (id: string) => {
-    // This function is now primarily called by CookbookManager after DB deletion
-    setRecipes(prev => prev.filter(recipe => recipe.id !== id));
-  };
+  // This function is now primarily called by CookbookManager after DB deletion
+  // It's passed down from Index.tsx to AppLayout, then to TopBar, and finally to MyCookbooksDialog and CookbookManager.
+  // It updates the local 'recipes' state in Index.tsx to reflect removals.
+  // The actual DB deletion is handled within AppContext and CookbookManager.
+  // The prop is named `onRecipeRemoved` to avoid confusion with `removeRecipe` which would imply DB interaction here.
+  // The `onRecipeRemoved` prop is now passed from Index.tsx to AppLayout, then to TopBar, and finally to MyCookbooksDialog.
+  // This ensures that when a recipe is removed via the CookbookManager dialog, the main `recipes` state in Index.tsx is updated.
 
   const handleMealPlanChange = (newMealPlan: MealPlan[]) => {
     setMealPlan(newMealPlan);
@@ -102,7 +111,7 @@ const AppLayout: React.FC = () => {
               }`}>
                 {recipes.length} recipes • {mealPlan.length} meals
               </div>
-              <TopBar />
+              <TopBar onRecipeRemoved={onRecipeRemoved} setActiveTab={setActiveTab} /> {/* Pass props here */}
             </div>
           </div>
         </div>
@@ -142,7 +151,7 @@ const AppLayout: React.FC = () => {
           <div className={`space-y-6 ${
             isMobile ? 'order-2' : ''
           }`}>
-            <CookbookManager onRecipeRemoved={handleRecipeRemoved} />
+            {/* CookbookManager is now rendered inside MyCookbooksDialog, which is in TopBar */}
             <FriendsList />
             <ShoppingList 
               recipes={recipes} 
