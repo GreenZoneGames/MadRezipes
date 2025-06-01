@@ -44,7 +44,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { arrayMove } from 'array-move';
+import arrayMove from 'array-move'; // Corrected import
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -838,7 +838,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                       {currentSelectedCookbook.is_public ? (
                         <span className="flex items-center gap-1"><Globe className="h-3 w-3" /> Public</span>
                       ) : (
-                        <span className="flex items-center gap-1"><Lock className="h-3 w-3" /> Private</span>
+                        <span className="flex items-center gap-1"><Lock className="h-3 w-4" /> Private</span>
                       )}
                     </Badge>
                   )}
