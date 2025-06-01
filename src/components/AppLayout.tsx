@@ -15,6 +15,7 @@ import { Menu, X } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
 import MobileNavMenu from './MobileNavMenu'; // Import the new component
 import SortableCollectionRecipeItem from './SortableCollectionRecipeItem'; // Import the new sortable item
+import RecipeDetailsDialog from './RecipeDetailsDialog'; // Import the new dialog
 
 import {
   DndContext,
@@ -43,6 +44,8 @@ interface Recipe {
   servings?: number;
   meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string; // Changed to snake_case
   cookbook_id?: string; // Changed to snake_case
+  is_public?: boolean;
+  cookbook_owner_id?: string;
 }
 
 interface AppLayoutProps {
@@ -53,11 +56,12 @@ interface AppLayoutProps {
   recipes: Recipe[]; // Added
   mealPlan: MealPlan[]; // Added
   onShoppingListChange: (ingredients: string[]) => void; // Added
-  onMealPlanChange: (mealPlan: Meal[]) => void; // Added
+  onMealPlanChange: (mealPlan: MealPlan[]) => void; // Added
   availableIngredients: string[]; // Added
   onRecipeGenerated: (recipe: Recipe) => void; // Added
   selectedMonth: string; // Added
   setSelectedMonth: (month: string) => void; // Added
+  onViewRecipeDetails: (recipe: Recipe) => void; // New prop from Index.tsx
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ 
@@ -73,6 +77,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   onRecipeGenerated,
   selectedMonth,
   setSelectedMonth,
+  onViewRecipeDetails, // Destructure new prop
 }) => {
   const { sidebarOpen, toggleSidebar, deleteRecipe } = useAppContext(); // Destructure deleteRecipe
   const isMobile = useIsMobile();
@@ -273,6 +278,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                           onAddToShoppingList={addToShoppingList}
                           onRecipeAdded={handleRecipeAdded}
                           onRemove={handleRemoveRecipeFromCollection} // Pass the remove handler
+                          onViewDetails={onViewRecipeDetails} // Pass onViewRecipeDetails
                         />
                       ))}
                     </div>

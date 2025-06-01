@@ -1,6 +1,6 @@
 "use client";
 
-import * as React from 'react'; // Changed import style
+import * as React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import RecipeCard from './RecipeCard';
@@ -35,16 +35,17 @@ interface SortableCollectionRecipeItemProps {
   recipe: Recipe;
   onAddToShoppingList?: (ingredients: string[]) => void;
   onRecipeAdded?: (recipe: Recipe) => void;
-  onRemove: (recipeId: string, cookbookId?: string) => void; // New prop
+  onRemove: (recipeId: string, cookbookId?: string) => void;
+  onViewDetails: (recipe: Recipe) => void; // New prop
 }
 
 const SortableCollectionRecipeItem: React.FC<SortableCollectionRecipeItemProps> = ({
   recipe,
   onAddToShoppingList,
   onRecipeAdded,
-  onRemove, // Destructure new prop
+  onRemove,
+  onViewDetails, // Destructure new prop
 }) => {
-  // This comment is added to trigger a re-compilation.
   const {
     attributes,
     listeners,
@@ -69,7 +70,8 @@ const SortableCollectionRecipeItem: React.FC<SortableCollectionRecipeItemProps> 
         onAddToShoppingList={onAddToShoppingList}
         onRecipeAdded={onRecipeAdded}
         showFullDetails={false} // Keep condensed view for collection
-        onRemove={onRemove} // Removed JSX comment
+        onRemove={onRemove}
+        onViewDetails={onViewDetails} // Pass onViewDetails to RecipeCard
       />
     </div>
   );

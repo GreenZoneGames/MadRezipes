@@ -1,11 +1,12 @@
 import React from 'react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Eye } from 'lucide-react'; // Import Eye icon
 import RecipeComments from './RecipeComments';
 import RecipeHeader from './recipes/RecipeHeader';
 import RecipeCategorizedIngredients from './recipes/RecipeCategorizedIngredients';
 import RecipeDetailsSection from './recipes/RecipeDetailsSection';
 import RecipeActions from './recipes/RecipeActions';
+import { Button } from '@/components/ui/button'; // Import Button
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -39,9 +40,10 @@ interface RecipeCardProps {
   onRecipeAdded?: (recipe: Recipe) => void;
   showFullDetails?: boolean;
   onRemove?: (recipeId: string, cookbookId?: string) => void;
+  onViewDetails?: (recipe: Recipe) => void; // New prop
 }
 
-const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, onRecipeAdded, showFullDetails = false, onRemove }) => {
+const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, onRecipeAdded, showFullDetails = false, onRemove, onViewDetails }) => {
   return (
     <Card className="hover-lift bg-card/50 backdrop-blur-sm border-border/50">
       <CardHeader className="pb-3">
@@ -70,6 +72,18 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
           onRecipeAdded={onRecipeAdded}
           onRemove={onRemove}
         />
+
+        {!showFullDetails && onViewDetails && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onViewDetails(recipe)}
+            className="w-full mt-4"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            View Full Recipe
+          </Button>
+        )}
 
         {/* Recipe Comments Section */}
         <div className="mt-6 pt-4 border-t border-border">
