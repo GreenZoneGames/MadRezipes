@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { User, LogIn, MessageCircle, BookOpen, Users, ShoppingCart } from 'lucide-react';
+import { User, LogIn, MessageCircle, BookOpen, Users, ShoppingCart, ChefHat } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -10,19 +10,39 @@ import UserAuth from './UserAuth';
 import UserProfileDialog from './UserProfileDialog';
 import MyCookbooksDialog from './MyCookbooksDialog';
 import FriendsDialog from './FriendsDialog';
-import ShoppingListDialog from './ShoppingListDialog'; // Import the new dialog
+import ShoppingListDialog from './ShoppingListDialog';
+import MealPlannerDialog from './MealPlannerDialog'; // Import the new dialog
 import { cn } from '@/lib/utils';
+import { MealPlan } from './MealPlanner'; // Import MealPlan type
+import { Recipe } from './RecipeScraper'; // Import Recipe type
 
 interface TopBarProps {
   onRecipeRemoved: (id: string) => void;
   setActiveTab: (tab: string) => void;
   onOpenDm: (recipientId: string, recipientUsername: string) => void;
-  recipes: any[]; // Added for ShoppingListDialog
-  mealPlan: any[]; // Added for ShoppingListDialog
+  recipes: Recipe[]; // Added for ShoppingListDialog and MealPlannerDialog
+  mealPlan: MealPlan[]; // Added for ShoppingListDialog and MealPlannerDialog
   onShoppingListChange: (ingredients: string[]) => void; // Added for ShoppingListDialog
+  onMealPlanChange: (mealPlan: MealPlan[]) => void; // Added for MealPlannerDialog
+  availableIngredients: string[]; // Added for MealPlannerDialog
+  onRecipeGenerated: (recipe: Recipe) => void; // Added for MealPlannerDialog
+  selectedMonth: string; // Added for MealPlannerDialog
+  setSelectedMonth: (month: string) => void; // Added for MealPlannerDialog
 }
 
-const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm, recipes, mealPlan, onShoppingListChange }) => {
+const TopBar: React.FC<TopBarProps> = ({ 
+  onRecipeRemoved, 
+  setActiveTab, 
+  onOpenDm, 
+  recipes, 
+  mealPlan, 
+  onShoppingListChange,
+  onMealPlanChange,
+  availableIngredients,
+  onRecipeGenerated,
+  selectedMonth,
+  setSelectedMonth,
+}) => {
   const { user } = useAppContext();
   const isMobile = useIsMobile();
   const [showAuth, setShowAuth] = useState(false);
@@ -30,7 +50,8 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm
   const [showProfile, setShowProfile] = useState(false);
   const [showCookbooksDialog, setShowCookbooksDialog] = useState(false);
   const [showFriendsDialog, setShowFriendsDialog] = useState(false);
-  const [showShoppingListDialog, setShowShoppingListDialog] = useState(false); // New state for shopping list dialog
+  const [showShoppingListDialog, setShowShoppingListDialog] = useState(false);
+  const [showMealPlannerDialog, setShowMealPlannerDialog] = useState(false); // New state for meal planner dialog
   const [hasShownLoginToast, setHasShownLoginToast] = useState(false);
 
   useEffect(() => {
@@ -69,8 +90,12 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm
     setShowFriendsDialog(true);
   };
 
-  const handleShoppingListClick = () => { // New handler for shopping list dialog
+  const handleShoppingListClick = () => {
     setShowShoppingListDialog(true);
+  };
+
+  const handleMealPlannerClick = () => { // New handler for meal planner dialog
+    setShowMealPlannerDialog(true);
   };
 
   const iconButtonClasses = "text-white hover:text-white hover:bg-white/10 border border-white/20 hover:border-white/40";
@@ -121,6 +146,17 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm
         {!isMobile && <span className="ml-1">List</span>}
       </Button>
 
+      {/* Meal Planner Button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={handleMealPlannerClick}
+        className={cn(iconButtonClasses)}
+      >
+        <ChefHat className="h-4 w-4" />
+        {!isMobile && <span className="ml-1">Planner</span>}
+      </Button>
+
       {/* User Profile / Sign In Button */}
       {user ? (
         <div className={cn(
@@ -169,6 +205,18 @@ const TopBar: React.FC<TopBarProps> = ({ onRecipeRemoved, setActiveTab, onOpenDm
         recipes={recipes}
         mealPlan={mealPlan}
         onShoppingListChange={onShoppingListChange}
+      />
+      <MealPlannerDialog
+        open={showMealPlannerDialog}
+        onOpenChange={setShowMealPlannerDialog}
+        recipes={recipes}
+        mealPlan={mealPlan}
+        onMealPlanChange={onMealPlanChange}
+        availableIngredients={availableIngredients}
+        onRecipeGenerated={onRecipeGenerated}
+        selectedMonth={selectedMonth}
+        setSelectedMonth={setSelectedMonth}
+        allRecipes={recipes} // Pass allRecipes here
       />
     </div>
   );

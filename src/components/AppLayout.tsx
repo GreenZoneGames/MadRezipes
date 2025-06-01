@@ -34,14 +34,32 @@ interface AppLayoutProps {
   recipes: Recipe[]; // Added
   mealPlan: MealPlan[]; // Added
   onShoppingListChange: (ingredients: string[]) => void; // Added
+  onMealPlanChange: (mealPlan: MealPlan[]) => void; // Added
+  availableIngredients: string[]; // Added
+  onRecipeGenerated: (recipe: Recipe) => void; // Added
+  selectedMonth: string; // Added
+  setSelectedMonth: (month: string) => void; // Added
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setActiveTab, onOpenDm, recipes, mealPlan, onShoppingListChange }) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ 
+  children, 
+  onRecipeRemoved, 
+  setActiveTab, 
+  onOpenDm, 
+  recipes, 
+  mealPlan, 
+  onShoppingListChange,
+  onMealPlanChange,
+  availableIngredients,
+  onRecipeGenerated,
+  selectedMonth,
+  setSelectedMonth,
+}) => {
   const { sidebarOpen, toggleSidebar } = useAppContext();
   const isMobile = useIsMobile();
   const [localRecipes, setLocalRecipes] = useState<Recipe[]>(recipes); // Renamed to avoid prop drilling issues
   const [localMealPlan, setLocalMealPlan] = useState<MealPlan[]>(mealPlan); // Renamed
-  const [shoppingList, setShoppingList] = useState<string[]>([]);
+  const [localShoppingList, setLocalShoppingList] = useState<string[]>(availableIngredients); // Renamed
 
   // Sync props to local state if they change from parent (Index.tsx)
   React.useEffect(() => {
@@ -52,8 +70,13 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
     setLocalMealPlan(mealPlan);
   }, [mealPlan]);
 
+  React.useEffect(() => {
+    setLocalShoppingList(availableIngredients);
+  }, [availableIngredients]);
+
   const handleRecipeAdded = (recipe: Recipe) => {
     setLocalRecipes(prev => {
+      // Prevent adding duplicates if recipe already exists by ID
       if (prev.some(r => r.id === recipe.id)) {
         return prev;
       }
@@ -65,22 +88,21 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
     });
   };
 
-  const handleMealPlanChange = (newMealPlan: MealPlan[]) => {
+  const handleLocalMealPlanChange = (newMealPlan: MealPlan[]) => {
     setLocalMealPlan(newMealPlan);
-    // Also call the parent's handler if needed
-    // onMealPlanChange(newMealPlan); // If Index.tsx needs to know about this change
+    onMealPlanChange(newMealPlan); // Pass up to Index.tsx
   };
 
   const handleLocalShoppingListChange = (newShoppingList: string[]) => {
-    setShoppingList(newShoppingList);
+    setLocalShoppingList(newShoppingList);
     onShoppingListChange(newShoppingList); // Pass up to Index.tsx
   };
 
   const addToShoppingList = (ingredients: string[]) => {
-    const newItems = ingredients.filter(item => !shoppingList.includes(item));
+    const newItems = ingredients.filter(item => !localShoppingList.includes(item));
     if (newItems.length > 0) {
-      setShoppingList(prev => [...prev, ...newItems]);
-      onShoppingListChange([...shoppingList, ...newItems]); // Update parent's state
+      setLocalShoppingList(prev => [...prev, ...newItems]);
+      onShoppingListChange([...localShoppingList, ...newItems]); // Update parent's state
       toast({
         title: '🛒 Added to Shopping List',
         description: `${newItems.length} ingredient(s) added to your shopping list.`
@@ -90,6 +112,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
 
   const handleRecipeGenerated = (recipe: Recipe) => {
     setLocalRecipes(prev => [...prev, recipe]);
+    onRecipeGenerated(recipe); // Pass up to Index.tsx
   };
 
   return (
@@ -123,9 +146,14 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
                 onRecipeRemoved={onRecipeRemoved} 
                 setActiveTab={setActiveTab} 
                 onOpenDm={onOpenDm}
-                recipes={localRecipes} // Pass local state
-                mealPlan={localMealPlan} // Pass local state
-                onShoppingListChange={handleLocalShoppingListChange} // Pass local handler
+                recipes={localRecipes}
+                mealPlan={localMealPlan}
+                onShoppingListChange={handleLocalShoppingListChange}
+                onMealPlanChange={handleLocalMealPlanChange} // Pass to TopBar
+                availableIngredients={localShoppingList} // Pass to TopBar
+                onRecipeGenerated={handleRecipeGenerated} // Pass to TopBar
+                selectedMonth={selectedMonth} // Pass to TopBar
+                setSelectedMonth={setSelectedMonth} // Pass to TopBar
               />
             </div>
           </div>
@@ -166,14 +194,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setAct
           <div className={`space-y-6 ${
             isMobile ? 'order-2' : ''
           }`}>
-            {/* ShoppingList is now rendered via dialog */}
-            <MealPlanner 
-              recipes={localRecipes} 
-              onMealPlanChange={handleMealPlanChange}
-              availableIngredients={shoppingList}
-              onRecipeGenerated={handleRecipeGenerated}
-            />
-            <MealExporter recipes={localRecipes} mealPlan={localMealPlan} />
+            {/* MealPlanner is now rendered via dialog */}
+            <MealExporter recipes={localRecipes} mealPlan={localMealPlan} selectedMonth={selectedMonth} />
+            <ShoppingListPDF mealPlan={localMealPlan} selectedMonth={selectedMonth} />
           </div>
         </div>
       </main>

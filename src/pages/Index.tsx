@@ -54,7 +54,7 @@ const Index = () => {
     new Date().toLocaleDateString('en-US', { month: 'long' })
   );
   const [openDmWindows, setOpenDmWindows] = useState<OpenDmWindow[]>([]);
-  const [activeTab, setActiveTab] = useState('planner');
+  const [activeTab, setActiveTab] = useState('add-recipe'); // Changed default tab
 
   const handleRecipeAdded = (recipe: Recipe) => {
     setRecipes(prev => {
@@ -100,9 +100,14 @@ const Index = () => {
         onRecipeRemoved={handleRecipeRemoved} 
         setActiveTab={setActiveTab}
         onOpenDm={handleOpenDm}
-        recipes={recipes} // Pass recipes to AppLayout
-        mealPlan={mealPlan} // Pass mealPlan to AppLayout
-        onShoppingListChange={handleShoppingListChange} // Pass onShoppingListChange to AppLayout
+        recipes={recipes}
+        mealPlan={mealPlan}
+        onShoppingListChange={handleShoppingListChange}
+        onMealPlanChange={handleMealPlanChange} // Pass to AppLayout
+        availableIngredients={availableIngredients} // Pass to AppLayout
+        onRecipeGenerated={handleRecipeAdded} // Pass to AppLayout
+        selectedMonth={selectedMonth} // Pass to AppLayout
+        setSelectedMonth={setSelectedMonth} // Pass to AppLayout
       >
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50">
           <div className="container mx-auto p-6 space-y-8">
@@ -116,40 +121,12 @@ const Index = () => {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="planner">Meal Planner</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2"> {/* Adjusted grid columns */}
                 <TabsTrigger value="add-recipe">Add Recipe</TabsTrigger>
                 <TabsTrigger value="discover">Discover</TabsTrigger>
               </TabsList>
               
-              <TabsContent value="planner" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div className="space-y-6"> {/* Left Column */}
-                    <RecipeScraper onRecipeAdded={handleRecipeAdded} />
-                    <MealPlanner 
-                      onMealPlanChange={handleMealPlanChange}
-                      availableIngredients={availableIngredients}
-                      onRecipeGenerated={handleRecipeAdded}
-                      selectedMonth={selectedMonth}
-                      setSelectedMonth={setSelectedMonth}
-                      allRecipes={recipes}
-                    />
-                  </div>
-                  
-                  <div className="space-y-6"> {/* Right Column */}
-                    {/* ShoppingList is now in a dialog */}
-                    <ShoppingListPDF 
-                      mealPlan={mealPlan}
-                      selectedMonth={selectedMonth}
-                    />
-                    <MealExporter 
-                      recipes={recipes} 
-                      mealPlan={mealPlan} 
-                      selectedMonth={selectedMonth}
-                    />
-                  </div>
-                </div>
-              </TabsContent>
+              {/* Removed 'planner' tab content */}
               
               <TabsContent value="add-recipe">
                 <ManualRecipeForm onRecipeAdded={handleRecipeAdded} />
