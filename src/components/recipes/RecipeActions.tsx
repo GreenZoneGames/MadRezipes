@@ -1,11 +1,17 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ExternalLink, BookOpen, Plus, Share2, Printer, Copy, Loader2 } from 'lucide-react';
+import { ExternalLink, BookOpen, Plus, Share2, Printer, Copy, Loader2, Twitter, Facebook, Pinterest } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import QuickShareRecipe from '../QuickShareRecipe';
 import AddRecipeToCookbookDialog from './AddRecipeToCookbookDialog';
 import CopyCookbookDialog from './CopyCookbookDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Recipe {
   id: string;
@@ -128,6 +134,25 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
     }
   };
 
+  const handleShareTwitter = () => {
+    const tweetText = `Check out this recipe: ${recipe.title} #MadRezipes #Recipe`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}&url=${encodeURIComponent(recipe.url)}`;
+    window.open(url, '_blank', 'width=600,height=400');
+    toast({ title: 'Sharing on Twitter', description: 'Opening Twitter to share your recipe.' });
+  };
+
+  const handleShareFacebook = () => {
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(recipe.url)}&quote=${encodeURIComponent(recipe.title)}`;
+    window.open(url, '_blank', 'width=600,height=400');
+    toast({ title: 'Sharing on Facebook', description: 'Opening Facebook to share your recipe.' });
+  };
+
+  const handleSharePinterest = () => {
+    const url = `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(recipe.url)}&media=${encodeURIComponent(recipe.image || '')}&description=${encodeURIComponent(recipe.title)}`;
+    window.open(url, '_blank', 'width=800,height=600');
+    toast({ title: 'Sharing on Pinterest', description: 'Opening Pinterest to share your recipe.' });
+  };
+
   const canCopyCookbook = user && recipe.is_public && recipe.cookbook_id && recipe.cookbook_owner_id !== user.id;
 
   return (
@@ -161,16 +186,34 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
         Add to Cookbook
       </Button>
       {user && (
-        <QuickShareRecipe recipe={recipe}>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 flex items-center gap-1"
-          >
-            <Share2 className="h-4 w-4" />
-            Share
-          </Button>
-        </QuickShareRecipe>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 flex items-center gap-1"
+            >
+              <Share2 className="h-4 w-4" />
+              Share
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={handleShareTwitter}>
+              <Twitter className="h-4 w-4 mr-2" /> Share on Twitter
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleShareFacebook}>
+              <Facebook className="h-4 w-4 mr-2" /> Share on Facebook
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleSharePinterest}>
+              <Pinterest className="h-4 w-4 mr-2" /> Share on Pinterest
+            </DropdownMenuItem>
+            <QuickShareRecipe recipe={recipe}>
+              <DropdownMenuItem onSelect={(e) => e.preventDefault()}> {/* Prevent dropdown from closing immediately */}
+                <Share2 className="h-4 w-4 mr-2" /> Share In-App
+              </DropdownMenuItem>
+            </QuickShareRecipe>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
       <Button
         variant="outline"
