@@ -196,7 +196,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
             isMobile ? 'order-2' : ''
           }`}>
             {/* MealPlanner is now rendered via dialog */}
-            <MealExporter recipes={localRecipes} mealPlan={localMealPlan} selectedMonth={selectedMonth} />
+            {/* Removed MealExporter from here */}
           </div>
         </div>
       </main>

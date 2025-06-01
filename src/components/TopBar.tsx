@@ -12,7 +12,6 @@ import MyCookbooksDialog from './MyCookbooksDialog';
 import FriendsDialog from './FriendsDialog';
 import ShoppingListDialog from './ShoppingListDialog';
 import MealPlannerDialog from './MealPlannerDialog';
-import MealExporterDialog from './MealExporterDialog'; // Import the new dialog
 import { cn } from '@/lib/utils';
 import { MealPlan } from './MealPlanner'; // Import MealPlan type
 import { Recipe } from './RecipeScraper'; // Import Recipe type
@@ -53,7 +52,6 @@ const TopBar: React.FC<TopBarProps> = ({
   const [showFriendsDialog, setShowFriendsDialog] = useState(false);
   const [showShoppingListDialog, setShowShoppingListDialog] = useState(false);
   const [showMealPlannerDialog, setShowMealPlannerDialog] = useState(false);
-  const [showMealExporterDialog, setShowMealExporterDialog] = useState(false); // New state for meal exporter dialog
   const [hasShownLoginToast, setHasShownLoginToast] = useState(false);
 
   useEffect(() => {
@@ -98,10 +96,6 @@ const TopBar: React.FC<TopBarProps> = ({
 
   const handleMealPlannerClick = () => {
     setShowMealPlannerDialog(true);
-  };
-
-  const handleMealExporterClick = () => { // New handler for meal exporter dialog
-    setShowMealExporterDialog(true);
   };
 
   const iconButtonClasses = "text-white hover:text-white hover:bg-white/10 border border-white/20 hover:border-white/40";
@@ -161,17 +155,6 @@ const TopBar: React.FC<TopBarProps> = ({
       >
         <ChefHat className="h-4 w-4" />
         {!isMobile && <span className="ml-1">Planner</span>}
-      </Button>
-
-      {/* Meal Exporter Button */}
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleMealExporterClick}
-        className={cn(iconButtonClasses)}
-      >
-        <Download className="h-4 w-4" />
-        {!isMobile && <span className="ml-1">Export</span>}
       </Button>
 
       {/* User Profile / Sign In Button */}
@@ -234,13 +217,6 @@ const TopBar: React.FC<TopBarProps> = ({
         selectedMonth={selectedMonth}
         setSelectedMonth={setSelectedMonth}
         allRecipes={recipes}
-      />
-      <MealExporterDialog
-        open={showMealExporterDialog}
-        onOpenChange={setShowMealExporterDialog}
-        recipes={recipes}
-        mealPlan={mealPlan}
-        selectedMonth={selectedMonth}
       />
     </div>
   );

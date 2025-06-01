@@ -240,23 +240,6 @@ const MealPlanner: React.FC<MealPlannerProps> = ({
     }
   };
 
-  const handleExportMealPlan = async () => {
-    console.log('Export button clicked. Current meal plan length:', mealPlan.length);
-    try {
-      await exportMealPlanToPDF(mealPlan, selectedMonth, allRecipes);
-      toast({ 
-        title: 'Calendar PDF Exported', 
-        description: `Full month calendar with ${mealPlan.length} meals and shopping list downloaded!` 
-      });
-    } catch (error) {
-      toast({ 
-        title: 'Export Error', 
-        description: 'Failed to generate PDF. Please try again.', 
-        variant: 'destructive' 
-      });
-    }
-  };
-
   const isLoadingRecipes = user && selectedCookbook?.user_id !== 'guest' ? isLoadingDbRecipes : false;
 
   return (

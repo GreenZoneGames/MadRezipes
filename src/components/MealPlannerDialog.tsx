@@ -2,6 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ChefHat } from 'lucide-react';
 import MealPlanner, { MealPlan, Recipe } from './MealPlanner';
+import MealExporter from './MealExporter'; // Import MealExporter
 
 interface MealPlannerDialogProps {
   open: boolean;
@@ -37,16 +38,23 @@ const MealPlannerDialog: React.FC<MealPlannerDialogProps> = ({
             Meal Planner
           </DialogTitle>
         </DialogHeader>
-        <MealPlanner
-          recipes={recipes}
-          mealPlan={mealPlan}
-          onMealPlanChange={onMealPlanChange}
-          availableIngredients={availableIngredients}
-          onRecipeGenerated={onRecipeGenerated}
-          selectedMonth={selectedMonth}
-          setSelectedMonth={setSelectedMonth}
-          allRecipes={allRecipes}
-        />
+        <div className="space-y-6"> {/* Added a div to contain both components with spacing */}
+          <MealPlanner
+            recipes={recipes}
+            mealPlan={mealPlan}
+            onMealPlanChange={onMealPlanChange}
+            availableIngredients={availableIngredients}
+            onRecipeGenerated={onRecipeGenerated}
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
+            allRecipes={allRecipes}
+          />
+          <MealExporter
+            recipes={recipes}
+            mealPlan={mealPlan}
+            selectedMonth={selectedMonth}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );
