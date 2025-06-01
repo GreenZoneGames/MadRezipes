@@ -13,10 +13,7 @@ import ManualRecipeForm from '@/components/ManualRecipeForm';
 import DirectMessageWindow from '@/components/DirectMessageWindow';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CookbookManager from '@/components/CookbookManager';
-import DiscoverRecipes from '@/components/DiscoverRecipes';
-import MealPlannerDialog from '@/components/MealPlannerDialog'; // Import new dialog
-import ShoppingListDialog from '@/components/ShoppingListDialog'; // Import new dialog
-import MealExporterDialog from '@/components/MealExporterDialog'; // Import new dialog
+import DiscoverRecipes from '@/components/DiscoverRecipes'; // Import new component
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -40,7 +37,7 @@ interface Recipe {
   servings?: number;
   meal_type?: 'Breakfast' | 'Lunch' | 'Dinner' | 'Appetizer' | 'Dessert' | 'Snack' | string;
   cookbook_id?: string;
-  is_public?: boolean;
+  is_public?: boolean; // Added to indicate if the parent cookbook is public
 }
 
 interface OpenDmWindow {
@@ -57,7 +54,7 @@ const Index = () => {
     new Date().toLocaleDateString('en-US', { month: 'long' })
   );
   const [openDmWindows, setOpenDmWindows] = useState<OpenDmWindow[]>([]);
-  const [activeTab, setActiveTab] = useState('add-recipe'); // Default to 'add-recipe' or 'discover'
+  const [activeTab, setActiveTab] = useState('planner');
 
   const handleRecipeAdded = (recipe: Recipe) => {
     setRecipes(prev => {
@@ -102,15 +99,7 @@ const Index = () => {
       <AppLayout 
         onRecipeRemoved={handleRecipeRemoved} 
         setActiveTab={setActiveTab}
-        onOpenDm={handleOpenDm}
-        recipes={recipes} // Pass recipes
-        mealPlan={mealPlan} // Pass mealPlan
-        onMealPlanChange={handleMealPlanChange} // Pass handler
-        availableIngredients={availableIngredients} // Pass ingredients
-        onRecipeGenerated={handleRecipeAdded} // Pass handler
-        selectedMonth={selectedMonth} // Pass month
-        setSelectedMonth={setSelectedMonth} // Pass handler
-        onShoppingListChange={handleShoppingListChange} // Pass handler
+        onOpenDm={handleOpenDm} // Pass onOpenDm here
       >
         <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-pink-50">
           <div className="container mx-auto p-6 space-y-8">
@@ -124,12 +113,45 @@ const Index = () => {
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2"> {/* Adjusted grid columns */}
+              <TabsList className="grid w-full grid-cols-3"> {/* Adjusted grid columns */}
+                <TabsTrigger value="planner">Meal Planner</TabsTrigger>
                 <TabsTrigger value="add-recipe">Add Recipe</TabsTrigger>
                 <TabsTrigger value="discover">Discover</TabsTrigger>
               </TabsList>
               
-              {/* Removed 'planner' tab content */}
+              <TabsContent value="planner" className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-6"> {/* Left Column */}
+                    <RecipeScraper onRecipeAdded={handleRecipeAdded} />
+                    <MealPlanner 
+                      onMealPlanChange={handleMealPlanChange}
+                      availableIngredients={availableIngredients}
+                      onRecipeGenerated={handleRecipeAdded}
+                      selectedMonth={selectedMonth}
+                      setSelectedMonth={setSelectedMonth}
+                      allRecipes={recipes}
+                    />
+                  </div>
+                  
+                  <div className="space-y-6"> {/* Right Column */}
+                    <ShoppingList 
+                      recipes={recipes} 
+                      onShoppingListChange={handleShoppingListChange}
+                      mealPlan={mealPlan}
+                    />
+                    <ShoppingListPDF 
+                      mealPlan={mealPlan}
+                      selectedMonth={selectedMonth}
+                    />
+                    <MealExporter 
+                      recipes={recipes} 
+                      mealPlan={mealPlan} 
+                      selectedMonth={selectedMonth}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+              
               {/* Removed 'community' tab content */}
               
               <TabsContent value="add-recipe">

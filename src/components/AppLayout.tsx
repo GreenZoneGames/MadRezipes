@@ -30,73 +30,60 @@ interface AppLayoutProps {
   children: React.ReactNode;
   onRecipeRemoved: (id: string) => void;
   setActiveTab: (tab: string) => void;
-  onOpenDm: (recipientId: string, recipientUsername: string) => void;
-  // New props for meal planning and shopping list
-  recipes: Recipe[];
-  mealPlan: MealPlan[];
-  onMealPlanChange: (mealPlan: MealPlan[]) => void;
-  availableIngredients: string[];
-  onRecipeGenerated: (recipe: Recipe) => void;
-  selectedMonth: string;
-  setSelectedMonth: (month: string) => void;
-  onShoppingListChange: (ingredients: string[]) => void;
+  onOpenDm: (recipientId: string, recipientUsername: string) => void; // New prop
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({
-  children,
-  onRecipeRemoved,
-  setActiveTab,
-  onOpenDm,
-  recipes,
-  mealPlan,
-  onMealPlanChange,
-  availableIngredients,
-  onRecipeGenerated,
-  selectedMonth,
-  setSelectedMonth,
-  onShoppingListChange,
-}) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ children, onRecipeRemoved, setActiveTab, onOpenDm }) => {
   const { sidebarOpen, toggleSidebar } = useAppContext();
   const isMobile = useIsMobile();
+  const [recipes, setRecipes] = useState<Recipe[]>([]); // This state will now primarily hold scraped/generated recipes before DB save, and then be updated by DB changes.
+  const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
+  const [shoppingList, setShoppingList] = useState<string[]>([]);
 
-  // These states are now managed in Index.tsx and passed down
-  // const [recipes, setRecipes] = useState<Recipe[]>([]);
-  // const [mealPlan, setMealPlan] = useState<MealPlan[]>([]);
-  // const [shoppingList, setShoppingList] = useState<string[]>([]);
-
-  // const handleRecipeAdded = (recipe: Recipe) => {
-  //   setRecipes(prev => {
-  //     if (prev.some(r => r.id === recipe.id)) {
-  //       return prev;
-  //     }
-  //     return [...prev, recipe];
-  //   });
-  //   toast({
-  //     title: '🍽️ Recipe Added!',
-  //     description: `${recipe.title} has been added to your collection.`
-  //   });
-  // };
-
-  // const handleMealPlanChange = (newMealPlan: MealPlan[]) => {
-  //   setMealPlan(newMealPlan);
-  // };
-
-  // const handleShoppingListChange = (newShoppingList: string[]) => {
-  //   setShoppingList(newShoppingList);
-  // };
-
-  const addToShoppingList = (ingredients: string[]) => {
-    // This function needs to call the handler passed from Index.tsx
-    onShoppingListChange(ingredients);
+  const handleRecipeAdded = (recipe: Recipe) => {
+    setRecipes(prev => {
+      // Prevent adding duplicates if recipe already exists by ID
+      if (prev.some(r => r.id === recipe.id)) {
+        return prev;
+      }
+      return [...prev, recipe];
+    });
     toast({
-      title: '🛒 Added to Shopping List',
-      description: `${ingredients.length} ingredient(s) added to your shopping list.`
+      title: '🍽️ Recipe Added!',
+      description: `${recipe.title} has been added to your collection.`
     });
   };
 
-  // const handleRecipeGenerated = (recipe: Recipe) => {
-  //   setRecipes(prev => [...prev, recipe]);
-  // };
+  // This function is now primarily called by CookbookManager after DB deletion
+  // It's passed down from Index.tsx to AppLayout, then to TopBar, and finally to MyCookbooksDialog and CookbookManager.
+  // It updates the local 'recipes' state in Index.tsx to reflect removals.
+  // The actual DB deletion is handled within AppContext and CookbookManager.
+  // The prop is named `onRecipeRemoved` to avoid confusion with `removeRecipe` which would imply DB interaction here.
+  // The `onRecipeRemoved` prop is now passed from Index.tsx to AppLayout, then to TopBar, and finally to MyCookbooksDialog.
+  // This ensures that when a recipe is removed via the CookbookManager dialog, the main `recipes` state in Index.tsx is updated.
+
+  const handleMealPlanChange = (newMealPlan: MealPlan[]) => {
+    setMealPlan(newMealPlan);
+  };
+
+  const handleShoppingListChange = (newShoppingList: string[]) => {
+    setShoppingList(newShoppingList);
+  };
+
+  const addToShoppingList = (ingredients: string[]) => {
+    const newItems = ingredients.filter(item => !shoppingList.includes(item));
+    if (newItems.length > 0) {
+      setShoppingList(prev => [...prev, ...newItems]);
+      toast({
+        title: '🛒 Added to Shopping List',
+        description: `${newItems.length} ingredient(s) added to your shopping list.`
+      });
+    }
+  };
+
+  const handleRecipeGenerated = (recipe: Recipe) => {
+    setRecipes(prev => [...prev, recipe]);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -128,15 +115,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               <TopBar 
                 onRecipeRemoved={onRecipeRemoved} 
                 setActiveTab={setActiveTab} 
-                onOpenDm={onOpenDm}
-                recipes={recipes}
-                mealPlan={mealPlan}
-                onMealPlanChange={onMealPlanChange}
-                availableIngredients={availableIngredients}
-                onRecipeGenerated={onRecipeGenerated}
-                selectedMonth={selectedMonth}
-                setSelectedMonth={setSelectedMonth}
-                onShoppingListChange={onShoppingListChange}
+                onOpenDm={onOpenDm} // Pass onOpenDm here
               />
             </div>
           </div>
@@ -150,17 +129,36 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           <div className={`space-y-6 ${
             isMobile ? 'order-1' : 'lg:col-span-2'
           }`}>
-            {/* RecipeScraper is now in Index.tsx's tabs */}
-            {/* The main content area will now be rendered by children prop */}
-            {children}
+            <RecipeScraper onRecipeAdded={handleRecipeAdded} />
+            
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold text-foreground">Your Recipe Collection</h2>
+              {recipes.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground animate-fade-in">
+                  <p>No recipes yet. Start by scraping recipes from a URL!</p>
+                  <p className="text-sm mt-2">Enter a recipe URL above to extract the exact recipe details.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {recipes.map(recipe => (
+                    <RecipeCard
+                      key={recipe.id}
+                      recipe={recipe}
+                      onAddToShoppingList={addToShoppingList}
+                      onRecipeAdded={handleRecipeAdded} // Pass this to allow adding from RecipeCard
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className={`space-y-6 ${
             isMobile ? 'order-2' : ''
           }`}>
-            {/* These components are now in dialogs or handled by Index.tsx's tabs */}
-            {/* <FriendsList /> */}
-            {/* <ShoppingList 
+            {/* CookbookManager is now rendered inside MyCookbooksDialog, which is in TopBar */}
+            {/* FriendsList is now rendered inside FriendsDialog, which is in TopBar */}
+            <ShoppingList 
               recipes={recipes} 
               onShoppingListChange={handleShoppingListChange}
               mealPlan={mealPlan}
@@ -171,7 +169,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               availableIngredients={shoppingList}
               onRecipeGenerated={handleRecipeGenerated}
             />
-            <MealExporter recipes={recipes} mealPlan={mealPlan} /> */}
+            <MealExporter recipes={recipes} mealPlan={mealPlan} />
           </div>
         </div>
       </main>
