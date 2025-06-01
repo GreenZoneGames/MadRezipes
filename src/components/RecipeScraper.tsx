@@ -13,6 +13,7 @@ import { useAppContext } from '@/contexts/AppContext';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import AddRecipeToCookbookDialog from './recipes/AddRecipeToCookbookDialog'; // Import the dialog
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -48,13 +49,16 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
   const [loading, setLoading] = useState(false);
   const [scrapedRecipes, setScrapedRecipes] = useState<Recipe[]>([]);
   const [selectedRecipes, setSelectedRecipes] = useState(new Set<string>());
-  const [showAddRecipeToCookbookDialog, setShowAddRecipeToCookbookDialog] = useState(false);
+  const [showBulkAddRecipeToCookbookDialog, setShowBulkAddRecipeToCookbookDialog] = useState(false);
   const [selectedCookbookId, setSelectedCookbookId] = useState('');
   const [isCreatingNewCookbook, setIsCreatingNewCookbook] = useState(false);
   const [newCookbookName, setNewCookbookName] = useState('');
   const [newCookbookDescription, setNewCookbookDescription] = useState('');
   const [newCookbookIsPublic, setNewCookbookIsPublic] = useState(false);
   const [addingRecipesToCookbook, setAddingRecipesToCookbook] = useState(false);
+
+  const [showSingleAddRecipeDialog, setShowSingleAddRecipeDialog] = useState(false);
+  const [recipeForSingleAdd, setRecipeForSingleAdd] = useState<Recipe | null>(null);
 
   const allAvailableCookbooks = useMemo(() => {
     const combined = [...cookbooks, ...guestCookbooks];
@@ -175,7 +179,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
       setScrapedRecipes([]);
       setSelectedRecipes(new Set());
       setUrl('');
-      setShowAddRecipeToCookbookDialog(false);
+      setShowBulkAddRecipeToCookbookDialog(false);
       // Reset new cookbook fields
       setIsCreatingNewCookbook(false);
       setNewCookbookName('');
@@ -191,6 +195,11 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
     } finally {
       setAddingRecipesToCookbook(false);
     }
+  };
+
+  const handleOpenSingleAddDialog = (recipe: Recipe) => {
+    setRecipeForSingleAdd(recipe);
+    setShowSingleAddRecipeDialog(true);
   };
 
   const selectAll = () => {
@@ -270,7 +279,7 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                   {selectedRecipes.size === scrapedRecipes.length ? 'Deselect All' : 'Select All'}
                 </Button>
                 {selectedRecipes.size > 0 && (
-                  <Dialog open={showAddRecipeToCookbookDialog} onOpenChange={setShowAddRecipeToCookbookDialog}>
+                  <Dialog open={showBulkAddRecipeToCookbookDialog} onOpenChange={setShowBulkAddRecipeToCookbookDialog}>
                     <DialogTrigger asChild>
                       <Button
                         className="bg-gradient-to-r from-primary to-primary/80"
@@ -456,6 +465,15 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
                           )}
                         </div>
                       </div>
+                      <div className="mt-3 flex justify-end">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleOpenSingleAddDialog(recipe)}
+                        >
+                          <BookOpen className="h-4 w-4 mr-1" /> Add to Cookbook
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -463,6 +481,14 @@ const RecipeScraper: React.FC<RecipeScraperProps> = ({ onRecipeAdded }) => {
             </div>
           </CardContent>
         </Card>
+      )}
+      {recipeForSingleAdd && (
+        <AddRecipeToCookbookDialog
+          recipe={recipeForSingleAdd}
+          open={showSingleAddRecipeDialog}
+          onOpenChange={setShowSingleAddRecipeDialog}
+          onRecipeAdded={onRecipeAdded}
+        />
       )}
     </div>
   );
