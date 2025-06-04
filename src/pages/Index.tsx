@@ -118,6 +118,7 @@ const Index = () => {
         selectedMonth={selectedMonth} // Pass to AppLayout
         setSelectedMonth={setSelectedMonth} // Pass to AppLayout
         onViewRecipeDetails={handleViewRecipeDetails} // Pass to AppLayout
+        onRecipeAdded={handleRecipeAdded} // Pass handleRecipeAdded to AppLayout
       >
         <div className="min-h-screen bg-gradient-to-br from-white via-green-50 to-blue-50">
           <div className="container mx-auto p-6 space-y-8">

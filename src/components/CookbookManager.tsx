@@ -98,10 +98,11 @@ interface CookbookManagerProps {
   onRecipeRemoved: (id: string) => void;
   setActiveTab: (tab: string) => void;
   setSelectedCookbook: (cookbook: Cookbook | null) => void; // Added setSelectedCookbook
+  onRecipeAdded: (recipe: Recipe) => void; // Add this prop
 }
 
 // Sortable Item Component (kept for potential future use or if DND is needed elsewhere)
-const SortableRecipeItem: React.FC<{ recipe: Recipe; onClick: (recipe: Recipe) => void; onRemove: (id: string) => void; canRemove: boolean }> = ({ recipe, onClick, onRemove, canRemove }) => {
+const SortableRecipeItem: React.FC<{ recipe: Recipe; onClick: (recipe: Recipe) => void; onRemove: (id: string) => void; canRemove: boolean; onRecipeAdded: (recipe: Recipe) => void; }> = ({ recipe, onClick, onRemove, canRemove, onRecipeAdded }) => {
   const {
     attributes,
     listeners,
@@ -145,7 +146,7 @@ const SortableRecipeItem: React.FC<{ recipe: Recipe; onClick: (recipe: Recipe) =
 };
 
 
-const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setActiveTab, setSelectedCookbook }) => {
+const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setActiveTab, setSelectedCookbook, onRecipeAdded }) => {
   const { user, cookbooks, selectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy, deleteCookbook, copyCookbook, cookbookInvitations, acceptCookbookInvitation, rejectCookbookInvitation, inviteCollaborator, removeCollaborator, updateRecipeOrder } = useAppContext();
   const queryClient = useQueryClient();
 
@@ -221,7 +222,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-primary" />
+            <BookOpen className="h-5 w-5" />
             My Cookbooks
           </div>
           <div className="flex items-center gap-2">
@@ -410,6 +411,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
         cookbook={currentSelectedCookbook}
         onRecipeRemoved={onRecipeRemoved}
         setActiveTab={setActiveTab}
+        onRecipeAdded={onRecipeAdded} // Pass the mandatory prop
       />
     </Card>
   );

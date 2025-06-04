@@ -30,9 +30,10 @@ interface Message {
 interface MessageInboxProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onRecipeAdded: (recipe: any) => void; // Add this prop
 }
 
-const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
+const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange, onRecipeAdded }) => {
   const { user, friends } = useAppContext();
   const [messages, setMessages] = useState<Message[]>([]);
   // Removed loading state
@@ -296,6 +297,7 @@ const MessageInbox: React.FC<MessageInboxProps> = ({ open, onOpenChange }) => {
                 <ThreadedMessage
                   message={message}
                   onReply={handleReply}
+                  onRecipeAdded={onRecipeAdded} // Pass the prop
                 />
               </div>
             ))

@@ -34,7 +34,7 @@ interface RecipeDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   recipe: Recipe | null;
   onAddToShoppingList?: (ingredients: string[]) => void;
-  onRecipeAdded?: (recipe: Recipe) => void;
+  onRecipeAdded: (recipe: Recipe) => void; // Made mandatory
   onRemove?: (recipeId: string, cookbookId?: string) => void;
 }
 
@@ -43,7 +43,7 @@ const RecipeDetailsDialog: React.FC<RecipeDetailsDialogProps> = ({
   onOpenChange,
   recipe,
   onAddToShoppingList,
-  onRecipeAdded,
+  onRecipeAdded, // Destructure mandatory prop
   onRemove,
 }) => {
   if (!recipe) return null;
@@ -60,7 +60,7 @@ const RecipeDetailsDialog: React.FC<RecipeDetailsDialogProps> = ({
         <RecipeCard
           recipe={recipe}
           onAddToShoppingList={onAddToShoppingList}
-          onRecipeAdded={onRecipeAdded}
+          onRecipeAdded={onRecipeAdded} // Pass the mandatory prop
           onRemove={onRemove}
           showFullDetails={true} // Always show full details in this dialog
         />

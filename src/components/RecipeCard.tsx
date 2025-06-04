@@ -37,7 +37,7 @@ interface Recipe {
 interface RecipeCardProps {
   recipe: Recipe;
   onAddToShoppingList?: (ingredients: string[]) => void;
-  onRecipeAdded?: (recipe: Recipe) => void;
+  onRecipeAdded: (recipe: Recipe) => void; // Made mandatory
   showFullDetails?: boolean;
   onRemove?: (recipeId: string, cookbookId?: string) => void;
   onViewDetails?: (recipe: Recipe) => void; // New prop
@@ -69,7 +69,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({ recipe, onAddToShoppingList, on
         <RecipeActions
           recipe={recipe}
           onAddToShoppingList={onAddToShoppingList}
-          onRecipeAdded={onRecipeAdded}
+          onRecipeAdded={onRecipeAdded} // Pass the mandatory prop
           onRemove={onRemove}
         />
 

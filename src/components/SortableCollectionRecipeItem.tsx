@@ -34,7 +34,7 @@ interface Recipe {
 interface SortableCollectionRecipeItemProps {
   recipe: Recipe;
   onAddToShoppingList?: (ingredients: string[]) => void;
-  onRecipeAdded?: (recipe: Recipe) => void;
+  onRecipeAdded: (recipe: Recipe) => void; // Made mandatory
   onRemove: (recipeId: string, cookbookId?: string) => void;
   onViewDetails: (recipe: Recipe) => void; // New prop
 }
@@ -42,9 +42,9 @@ interface SortableCollectionRecipeItemProps {
 const SortableCollectionRecipeItem: React.FC<SortableCollectionRecipeItemProps> = ({
   recipe,
   onAddToShoppingList,
-  onRecipeAdded,
+  onRecipeAdded, // Destructure mandatory prop
   onRemove,
-  onViewDetails, // Destructure new prop
+  onViewDetails,
 }) => {
   const {
     attributes,
@@ -68,7 +68,7 @@ const SortableCollectionRecipeItem: React.FC<SortableCollectionRecipeItemProps> 
       <RecipeCard
         recipe={recipe}
         onAddToShoppingList={onAddToShoppingList}
-        onRecipeAdded={onRecipeAdded}
+        onRecipeAdded={onRecipeAdded} // Pass the mandatory prop
         showFullDetails={false} // Keep condensed view for collection
         onRemove={onRemove}
         onViewDetails={onViewDetails} // Pass onViewDetails to RecipeCard

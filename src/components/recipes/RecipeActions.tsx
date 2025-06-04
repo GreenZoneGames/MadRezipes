@@ -42,7 +42,7 @@ interface Recipe {
 interface RecipeActionsProps {
   recipe: Recipe;
   onAddToShoppingList?: (ingredients: string[]) => void;
-  onRecipeAdded?: (recipe: Recipe) => void;
+  onRecipeAdded: (recipe: Recipe) => void; // Made mandatory
   onRemove?: (recipeId: string, cookbookId?: string) => void; // New prop for removal
 }
 
@@ -279,7 +279,7 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
         recipe={recipe}
         open={showAddCookbookDialog}
         onOpenChange={setShowAddCookbookDialog}
-        onRecipeAdded={onRecipeAdded || (() => {})} // Provide a default empty function if not passed
+        onRecipeAdded={onRecipeAdded} // Pass the mandatory prop
       />
       <CopyCookbookDialog
         recipe={recipe}

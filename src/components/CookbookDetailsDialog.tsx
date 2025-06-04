@@ -85,10 +85,11 @@ interface CookbookDetailsDialogProps {
   cookbook: Cookbook | null;
   onRecipeRemoved: (id: string) => void;
   setActiveTab: (tab: string) => void;
+  onRecipeAdded: (recipe: Recipe) => void; // Add this prop
 }
 
 // Sortable Item Component
-const SortableRecipeItem: React.FC<{ recipe: Recipe; onClick: (recipe: Recipe) => void; onRemove: (id: string) => void; canRemove: boolean }> = ({ recipe, onClick, onRemove, canRemove }) => {
+const SortableRecipeItem: React.FC<{ recipe: Recipe; onClick: (recipe: Recipe) => void; onRemove: (id: string) => void; canRemove: boolean; onRecipeAdded: (recipe: Recipe) => void; }> = ({ recipe, onClick, onRemove, canRemove, onRecipeAdded }) => {
   const {
     attributes,
     listeners,
@@ -137,6 +138,7 @@ const CookbookDetailsDialog: React.FC<CookbookDetailsDialogProps> = ({
   cookbook,
   onRecipeRemoved,
   setActiveTab,
+  onRecipeAdded, // Destructure mandatory prop
 }) => {
   const { user, guestRecipes, setGuestRecipes, deleteCookbook, setSelectedCookbook, updateRecipeOrder } = useAppContext();
   const queryClient = useQueryClient();
@@ -520,6 +522,7 @@ const CookbookDetailsDialog: React.FC<CookbookDetailsDialogProps> = ({
                         onClick={handleViewRecipeDetails}
                         onRemove={handleRemoveRecipe}
                         canRemove={canAddRemoveRecipes}
+                        onRecipeAdded={onRecipeAdded} // Pass the mandatory prop
                       />
                     ))}
                   </div>
@@ -567,6 +570,7 @@ const CookbookDetailsDialog: React.FC<CookbookDetailsDialogProps> = ({
               <RecipeCard
                 recipe={selectedRecipeForDetails}
                 showFullDetails={true}
+                onRecipeAdded={onRecipeAdded} // Pass the mandatory prop
               />
             )}
           </DialogContent>

@@ -62,6 +62,7 @@ interface AppLayoutProps {
   selectedMonth: string; // Added
   setSelectedMonth: (month: string) => void; // Added
   onViewRecipeDetails: (recipe: Recipe) => void; // New prop from Index.tsx
+  onRecipeAdded: (recipe: Recipe) => void; // New prop from Index.tsx
 }
 
 const AppLayout: React.FC<AppLayoutProps> = ({ 
@@ -78,6 +79,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   selectedMonth,
   setSelectedMonth,
   onViewRecipeDetails, // Destructure new prop
+  onRecipeAdded, // Destructure new prop
 }) => {
   const { sidebarOpen, toggleSidebar, deleteRecipe, setSelectedCookbook } = useAppContext(); // Destructure deleteRecipe and setSelectedCookbook
   const isMobile = useIsMobile();
@@ -104,7 +106,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
     setLocalShoppingList(availableIngredients);
   }, [availableIngredients]);
 
-  const handleRecipeAdded = (recipe: Recipe) => {
+  const handleLocalRecipeAdded = (recipe: Recipe) => { // Renamed to avoid conflict with prop
     setLocalRecipes(prev => {
       // Prevent adding duplicates if recipe already exists by ID
       if (prev.some(r => r.id === recipe.id)) {
@@ -112,7 +114,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
       }
       return [...prev, recipe];
     });
-    // Toast is now handled by RecipeScraper directly for automatic adds
+    onRecipeAdded(recipe); // Call the prop to update parent's state
   };
 
   const handleLocalMealPlanChange = (newMealPlan: MealPlan[]) => {
@@ -249,7 +251,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           <div className={`space-y-6 ${
             isMobile ? 'order-1' : 'lg:col-span-2'
           }`}>
-            <RecipeScraper onRecipeAdded={handleRecipeAdded} />
+            <RecipeScraper onRecipeAdded={handleLocalRecipeAdded} />
             
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-foreground">Your Recipe Collection</h2>
@@ -276,7 +278,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
                           key={recipe.id}
                           recipe={recipe}
                           onAddToShoppingList={addToShoppingList}
-                          onRecipeAdded={handleRecipeAdded}
+                          onRecipeAdded={handleLocalRecipeAdded} // Pass the local handler
                           onRemove={handleRemoveRecipeFromCollection} // Pass the remove handler
                           onViewDetails={onViewRecipeDetails} // Pass onViewRecipeDetails
                         />
@@ -304,6 +306,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               onRecipeRemoved={onRecipeRemoved} 
               setActiveTab={setActiveTab} 
               setSelectedCookbook={setSelectedCookbook} // Pass setSelectedCookbook
+              onRecipeAdded={handleLocalRecipeAdded} // Pass the local handler
             />
           </div>
         </div>

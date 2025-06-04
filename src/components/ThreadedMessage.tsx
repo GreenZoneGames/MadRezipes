@@ -41,9 +41,10 @@ interface ThreadedMessageProps {
   message: Message;
   onReply: (parentId: string, content: string) => void;
   depth?: number;
+  onRecipeAdded: (recipe: Recipe) => void; // Add this prop
 }
 
-const ThreadedMessage: React.FC<ThreadedMessageProps> = ({ message, onReply, depth = 0 }) => {
+const ThreadedMessage: React.FC<ThreadedMessageProps> = ({ message, onReply, depth = 0, onRecipeAdded }) => {
   const { user, addRecipeToCookbook } = useAppContext(); // Destructure addRecipeToCookbook
   const [showReply, setShowReply] = useState(false);
   const [replyContent, setReplyContent] = useState('');
@@ -96,6 +97,7 @@ const ThreadedMessage: React.FC<ThreadedMessageProps> = ({ message, onReply, dep
         return;
       }
       await addRecipeToCookbook(recipe, defaultCookbook.id);
+      onRecipeAdded(recipe); // Call the prop to update main state
       toast({
         title: 'Recipe Added!',
         description: `${recipe.title} has been added to your collection.`
@@ -200,6 +202,7 @@ const ThreadedMessage: React.FC<ThreadedMessageProps> = ({ message, onReply, dep
           message={reply}
           onReply={onReply}
           depth={depth + 1}
+          onRecipeAdded={onRecipeAdded} // Pass the prop to replies
         />
       ))}
     </div>

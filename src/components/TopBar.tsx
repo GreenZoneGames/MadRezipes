@@ -27,6 +27,7 @@ interface TopBarProps {
   onRecipeGenerated: (recipe: Recipe) => void;
   selectedMonth: string;
   setSelectedMonth: (month: string) => void;
+  onRecipeAdded: (recipe: Recipe) => void; // Add this prop
 }
 
 const TopBar: React.FC<TopBarProps> = ({ 
@@ -41,6 +42,7 @@ const TopBar: React.FC<TopBarProps> = ({
   onRecipeGenerated,
   selectedMonth,
   setSelectedMonth,
+  onRecipeAdded, // Destructure new prop
 }) => {
   const { user, hasShownWelcomeToast, setHasShownWelcomeToast } = useAppContext();
   const isMobile = useIsMobile();
@@ -171,7 +173,7 @@ const TopBar: React.FC<TopBarProps> = ({
       )}
       
       <UserAuth open={showAuth} onOpenChange={setShowAuth} />
-      <MessageInbox open={showMessages} onOpenChange={setShowMessages} />
+      <MessageInbox open={showMessages} onOpenChange={setShowMessages} onRecipeAdded={onRecipeAdded} /> {/* Pass the prop */}
       <UserProfileDialog open={showProfile} onOpenChange={setShowProfile} />
       {/* Re-added dialogs for desktop view */}
       <FriendsDialog
