@@ -250,14 +250,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const uniqueCookbooks = Array.from(new Map(allCookbooks.map(cb => [cb.id, cb])).values());
 
       setCookbooks(uniqueCookbooks);
-      // Automatically select the first cookbook if none is selected
-      if (!selectedCookbook && uniqueCookbooks.length > 0) {
-        setSelectedCookbook(uniqueCookbooks[0]);
-      }
     } catch (error) {
       console.error('Load cookbooks error:', error);
     }
-  }, [selectedCookbook]); // Added selectedCookbook to dependencies
+  }, [setCookbooks]); // Removed selectedCookbook from dependencies
+
+  // New useEffect to manage selectedCookbook based on available cookbooks
+  useEffect(() => {
+    const currentCookbookList = user ? cookbooks : guestCookbooks;
+    if (currentCookbookList.length > 0 && !selectedCookbook) {
+      setSelectedCookbook(currentCookbookList[0]);
+    } else if (selectedCookbook && !currentCookbookList.some(cb => cb.id === selectedCookbook.id)) {
+      // If the currently selected cookbook is no longer in the list, deselect it
+      setSelectedCookbook(null);
+    }
+  }, [user, cookbooks, guestCookbooks, selectedCookbook, setSelectedCookbook]);
+
 
   const loadFriends = async (userId: string) => {
     try {
@@ -315,7 +323,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         variant: 'destructive'
       });
     }
-  }, []);
+  }, [setSavedMealPlans]);
 
   const loadCookbookInvitations = useCallback(async (userId: string) => {
     try {
@@ -345,7 +353,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (error) {
       console.error('Error loading cookbook invitations:', error);
     }
-  }, []);
+  }, [setCookbookInvitations]);
 
   const syncGuestDataToUser = useCallback(async () => {
     if (!user || (guestCookbooks.length === 0 && guestRecipes.length === 0)) {
@@ -430,7 +438,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } catch (error) {
       console.error('Error syncing guest data:', error);
     }
-  }, [user, guestCookbooks, guestRecipes, queryClient]);
+  }, [user, guestCookbooks, guestRecipes, queryClient, setGuestCookbooks, setGuestRecipes]);
 
   const checkUser = useCallback(async () => {
     try {
@@ -510,7 +518,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // If there's an error checking user, assume logged out state
       setUser(null);
     }
-  }, [guestCookbooks, guestRecipes, syncGuestDataToUser, loadMealPlans, loadCookbookInvitations, loadCookbooks]); // Added loadCookbooks to dependencies
+  }, [guestCookbooks, guestRecipes, syncGuestDataToUser, loadMealPlans, loadCookbookInvitations, loadCookbooks, setFriends, setSavedMealPlans, setCookbookInvitations]); // Added setters to dependencies
 
   useEffect(() => {
     checkUser();
@@ -1131,7 +1139,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         description: 'The cookbook invitation has been declined.',
       });
       queryClient.invalidateQueries({ queryKey: ['cookbookInvitations', user.id] });
-    } catch (error: any) {
+    }
+    catch (error: any) {
       console.error('Error rejecting invitation:', error);
       toast({
         title: 'Failed to Reject Invitation',
