@@ -79,7 +79,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   setSelectedMonth,
   onViewRecipeDetails, // Destructure new prop
 }) => {
-  const { sidebarOpen, toggleSidebar, deleteRecipe } = useAppContext(); // Destructure deleteRecipe
+  const { sidebarOpen, toggleSidebar, deleteRecipe, setSelectedCookbook } = useAppContext(); // Destructure deleteRecipe and setSelectedCookbook
   const isMobile = useIsMobile();
   const [localRecipes, setLocalRecipes] = useState<Recipe[]>(recipes); // Renamed to avoid prop drilling issues
   const [localMealPlan, setLocalMealPlan] = useState<MealPlan[]>(mealPlan); // Renamed
@@ -300,7 +300,11 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           <div className={`space-y-6 ${
             isMobile ? 'order-2' : ''
           }`}>
-            <CookbookManager onRecipeRemoved={onRecipeRemoved} setActiveTab={setActiveTab} />
+            <CookbookManager 
+              onRecipeRemoved={onRecipeRemoved} 
+              setActiveTab={setActiveTab} 
+              setSelectedCookbook={setSelectedCookbook} // Pass setSelectedCookbook
+            />
           </div>
         </div>
       </main>

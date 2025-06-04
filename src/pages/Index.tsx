@@ -14,6 +14,7 @@ import DirectMessageWindow from '@/components/DirectMessageWindow';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CookbookManager from '@/components/CookbookManager';
 import DiscoverRecipes from '@/components/DiscoverRecipes'; // Import new component
+import RecipeDetailsDialog from '@/components/RecipeDetailsDialog'; // Import RecipeDetailsDialog
 
 interface CategorizedIngredients {
   proteins: string[];
@@ -56,6 +57,9 @@ const Index = () => {
   const [openDmWindows, setOpenDmWindows] = useState<OpenDmWindow[]>([]);
   const [activeTab, setActiveTab] = useState('add-recipe'); // Changed default tab
 
+  const [selectedRecipeForDetails, setSelectedRecipeForDetails] = useState<Recipe | null>(null);
+  const [showRecipeDetailsDialog, setShowRecipeDetailsDialog] = useState(false);
+
   const handleRecipeAdded = (recipe: Recipe) => {
     setRecipes(prev => {
       if (prev.some(r => r.id === recipe.id)) {
@@ -94,6 +98,11 @@ const Index = () => {
     setOpenDmWindows(prev => prev.filter(window => window.id !== id));
   };
 
+  const handleViewRecipeDetails = (recipe: Recipe) => {
+    setSelectedRecipeForDetails(recipe);
+    setShowRecipeDetailsDialog(true);
+  };
+
   return (
     <AppProvider>
       <AppLayout 
@@ -108,6 +117,7 @@ const Index = () => {
         onRecipeGenerated={handleRecipeAdded} // Pass to AppLayout
         selectedMonth={selectedMonth} // Pass to AppLayout
         setSelectedMonth={setSelectedMonth} // Pass to AppLayout
+        onViewRecipeDetails={handleViewRecipeDetails} // Pass to AppLayout
       >
         <div className="min-h-screen bg-gradient-to-br from-white via-green-50 to-blue-50">
           <div className="container mx-auto p-6 space-y-8">
@@ -133,7 +143,7 @@ const Index = () => {
               </TabsContent>
 
               <TabsContent value="discover">
-                <DiscoverRecipes onRecipeAdded={handleRecipeAdded} />
+                <DiscoverRecipes onRecipeAdded={handleRecipeAdded} onViewDetails={handleViewRecipeDetails} />
               </TabsContent>
             </Tabs>
           </div>
@@ -149,6 +159,15 @@ const Index = () => {
           onClose={() => handleCloseDm(dmWindow.id)}
         />
       ))}
+
+      <RecipeDetailsDialog
+        open={showRecipeDetailsDialog}
+        onOpenChange={setShowRecipeDetailsDialog}
+        recipe={selectedRecipeForDetails}
+        onAddToShoppingList={handleShoppingListChange} // Pass the shopping list handler
+        onRecipeAdded={handleRecipeAdded} // Pass the recipe added handler
+        onRemove={handleRecipeRemoved} // Pass the recipe remove handler
+      />
     </AppProvider>
   );
 };

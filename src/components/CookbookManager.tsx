@@ -97,6 +97,7 @@ interface CookbookCollaborator {
 interface CookbookManagerProps {
   onRecipeRemoved: (id: string) => void;
   setActiveTab: (tab: string) => void;
+  setSelectedCookbook: (cookbook: Cookbook | null) => void; // Added setSelectedCookbook
 }
 
 // Sortable Item Component (kept for potential future use or if DND is needed elsewhere)
@@ -144,8 +145,8 @@ const SortableRecipeItem: React.FC<{ recipe: Recipe; onClick: (recipe: Recipe) =
 };
 
 
-const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setActiveTab }) => {
-  const { user, cookbooks, selectedCookbook, setSelectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy, deleteCookbook, copyCookbook, cookbookInvitations, acceptCookbookInvitation, rejectCookbookInvitation, inviteCollaborator, removeCollaborator, updateRecipeOrder } = useAppContext();
+const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setActiveTab, setSelectedCookbook }) => {
+  const { user, cookbooks, selectedCookbook, createCookbook, guestCookbooks, guestRecipes, setGuestRecipes, syncGuestDataToUser, updateCookbookPrivacy, deleteCookbook, copyCookbook, cookbookInvitations, acceptCookbookInvitation, rejectCookbookInvitation, inviteCollaborator, removeCollaborator, updateRecipeOrder } = useAppContext();
   const queryClient = useQueryClient();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -154,7 +155,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
   const [newCookbookIsPublic, setNewCookbookIsPublic] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const [selectedCookbookIds, setSelectedCookbookIds] = useState<Set<string>>(new Set());
+  // Removed selectedCookbookIds state as bulk delete is removed
 
   const [showCookbookDetailsDialog, setShowCookbookDetailsDialog] = useState(false); // New state for CookbookDetailsDialog
 
@@ -162,6 +163,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
     (user ? cookbooks : guestCookbooks).map(cb => [cb.id, cb])
   ).values());
 
+  // Use selectedCookbook from context, or default to the first unique cookbook
   const currentSelectedCookbook = selectedCookbook || (uniqueCookbooks.length > 0 ? uniqueCookbooks[0] : null);
 
   const handleCreateCookbook = async () => {
@@ -182,7 +184,8 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
       setNewCookbookIsPublic(false);
       setShowCreateDialog(false);
       if (newCb) {
-        setSelectedCookbook(newCb);
+        setSelectedCookbook(newCb); // Set as selected immediately
+        setShowCookbookDetailsDialog(true); // Open details for the new cookbook
       }
     } catch (error: any) {
       console.error('Creation Failed:', error.message);
@@ -191,48 +194,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
     }
   };
 
-  const handleDeleteCookbook = async (cookbookId: string, cookbookName: string) => {
-    try {
-      await deleteCookbook(cookbookId);
-      toast({
-        title: 'Cookbook Deleted!',
-        description: `"${cookbookName}" and all its recipes have been removed.`
-      });
-    } catch (error: any) {
-      toast({
-        title: 'Deletion Failed',
-        description: error.message || 'An error occurred while deleting the cookbook.',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const handleBulkDeleteCookbooks = async () => {
-    if (selectedCookbookIds.size === 0) return;
-
-    setLoading(true);
-    try {
-      for (const id of selectedCookbookIds) {
-        const cookbookToDelete = uniqueCookbooks.find(cb => cb.id === id);
-        if (cookbookToDelete) {
-          await deleteCookbook(id);
-        }
-      }
-      toast({
-        title: 'Cookbooks Deleted!',
-        description: `${selectedCookbookIds.size} cookbook(s) and their recipes have been removed.`
-      });
-      setSelectedCookbookIds(new Set());
-    } catch (error: any) {
-      toast({
-        title: 'Bulk Deletion Failed',
-        description: error.message || 'An error occurred during bulk deletion.',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Removed handleDeleteCookbook and handleBulkDeleteCookbooks as they are now handled in CookbookDetailsDialog
 
   const handleSaveToAccount = () => {
     if (!user) {
@@ -244,35 +206,13 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
     setShowAuthDialog(false);
   };
 
-  const toggleCookbookSelection = (cookbookId: string) => {
-    setSelectedCookbookIds(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(cookbookId)) {
-        newSet.delete(cookbookId);
-      } else {
-        newSet.add(cookbookId);
-      }
-      return newSet;
-    });
-  };
+  // Removed toggleCookbookSelection and toggleSelectAllCookbooks
 
-  const toggleSelectAllCookbooks = () => {
-    if (selectedCookbookIds.size === uniqueCookbooks.length) {
-      setSelectedCookbookIds(new Set());
-    } else {
-      setSelectedCookbookIds(new Set(uniqueCookbooks.map(cb => cb.id)));
-    }
-  };
-
-  const handleOpenCookbookDetails = () => {
-    if (currentSelectedCookbook) {
+  const handleSelectCookbookAndOpenDetails = (cookbookId: string) => {
+    const cookbook = uniqueCookbooks.find(c => c.id === cookbookId);
+    if (cookbook) {
+      setSelectedCookbook(cookbook);
       setShowCookbookDetailsDialog(true);
-    } else {
-      toast({
-        title: 'No Cookbook Selected',
-        description: 'Please select a cookbook to open its details.',
-        variant: 'destructive'
-      });
     }
   };
 
@@ -381,10 +321,7 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
 
           <Select
             value={currentSelectedCookbook?.id || ''}
-            onValueChange={(value) => {
-              const cookbook = uniqueCookbooks.find(c => c.id === value);
-              setSelectedCookbook(cookbook || null);
-            }}
+            onValueChange={handleSelectCookbookAndOpenDetails} // Directly open details on select
           >
             <SelectTrigger>
               <SelectValue>
@@ -450,52 +387,11 @@ const CookbookManager: React.FC<CookbookManagerProps> = ({ onRecipeRemoved, setA
                 </p>
               )}
 
-              <div className="flex items-center justify-between mt-4">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="select-all-cookbooks"
-                    checked={selectedCookbookIds.size === uniqueCookbooks.length && uniqueCookbooks.length > 0}
-                    onCheckedChange={toggleSelectAllCookbooks}
-                  />
-                  <Label htmlFor="select-all-cookbooks" className="text-sm font-medium">
-                    Select All ({selectedCookbookIds.size})
-                  </Label>
-                </div>
-                {selectedCookbookIds.size > 0 && (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm" disabled={loading}>
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Delete Selected ({selectedCookbookIds.size})
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Confirm Bulk Deletion</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete {selectedCookbookIds.size} selected cookbook(s)? This action cannot be undone and will also delete all recipes within them.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleBulkDeleteCookbooks} className="bg-destructive hover:bg-destructive/90">
-                          {loading ? 'Deleting...' : 'Confirm Delete'}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
-              </div>
-
-              <div className="flex gap-2 mt-4">
-                {/* Removed Plan with this Cookbook and Export Recipes buttons from here */}
-              </div>
-
-              {/* Removed recipe list and DND from here */}
+              {/* Removed bulk select and delete */}
               
               {currentSelectedCookbook && (
                 <Button 
-                  onClick={handleOpenCookbookDetails} 
+                  onClick={() => setShowCookbookDetailsDialog(true)} // Explicitly open dialog
                   className="w-full mt-4 bg-gradient-to-r from-primary to-blue-500 hover:from-primary/90 hover:to-blue-600"
                 >
                   <BookOpen className="h-4 w-4 mr-2" />

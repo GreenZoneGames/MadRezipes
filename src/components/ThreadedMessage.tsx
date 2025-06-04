@@ -137,6 +137,7 @@ const ThreadedMessage: React.FC<ThreadedMessageProps> = ({ message, onReply, dep
                 showFullDetails={true} // Show full details for shared recipes
                 onAddToShoppingList={handleAddRecipeToCollection} // Allow adding to shopping list from here
                 onRecipeAdded={handleAddRecipeToCollection} // Allow adding to collection from here
+                onViewDetails={() => { /* No action needed, already full details */ }} // Dummy function
               />
               {message.content && (
                 <p className="text-sm mt-2">{message.content}</p>

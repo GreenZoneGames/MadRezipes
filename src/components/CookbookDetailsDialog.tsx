@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Trash2, Edit, Loader2, Globe, Lock, CalendarDays, Printer, UserPlus, Users, ListOrdered } from 'lucide-react';
+import { BookOpen, Trash2, Edit, Loader2, Globe, Lock, CalendarDays, Printer, UserPlus, Users, ListOrdered, Plus } from 'lucide-react';
 import { useAppContext } from '@/contexts/AppContext';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
@@ -325,6 +325,18 @@ const CookbookDetailsDialog: React.FC<CookbookDetailsDialogProps> = ({
     setShowRecipeDetailsDialog(true);
   };
 
+  const handleAddNewRecipe = () => {
+    if (cookbook) {
+      setSelectedCookbook(cookbook); // Ensure this cookbook is selected in context
+      setActiveTab('add-recipe'); // Switch to the add-recipe tab
+      onOpenChange(false); // Close the cookbook details dialog
+      toast({
+        title: 'Ready to Add Recipe',
+        description: `You can now add a new recipe to "${cookbook.name}".`
+      });
+    }
+  };
+
   // DND state
   const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useSensors(
@@ -471,6 +483,16 @@ const CookbookDetailsDialog: React.FC<CookbookDetailsDialogProps> = ({
 
           <h3 className="font-semibold text-lg flex items-center gap-2 mt-6">
             <ListOrdered className="h-5 w-5" /> Recipes
+            {canAddRemoveRecipes && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddNewRecipe}
+                className="ml-auto text-primary hover:text-primary/80 border-primary/50"
+              >
+                <Plus className="h-4 w-4 mr-1" /> Add New
+              </Button>
+            )}
           </h3>
           <div className="space-y-4">
             {isLoadingCurrentRecipes ? (

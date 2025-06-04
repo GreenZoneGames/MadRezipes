@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react'; // Import useEffect
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +37,7 @@ interface ManualRecipeFormProps {
 }
 
 const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) => {
-  const { user, cookbooks, guestCookbooks, createCookbook, addRecipeToCookbook } = useAppContext();
+  const { user, cookbooks, guestCookbooks, createCookbook, addRecipeToCookbook, selectedCookbook } = useAppContext();
   const [isCreatingNewCookbook, setIsCreatingNewCookbook] = useState(false);
   const [newCookbookName, setNewCookbookName] = useState('');
   const [newCookbookDescription, setNewCookbookDescription] = useState('');
@@ -62,9 +62,19 @@ const ManualRecipeForm: React.FC<ManualRecipeFormProps> = ({ onRecipeAdded }) =>
       cookTime: '',
       servings: undefined,
       mealType: '',
-      cookbookId: '',
+      cookbookId: selectedCookbook?.id || '', // Pre-select if a cookbook is already chosen
     },
   });
+
+  // Effect to update cookbookId when selectedCookbook in context changes
+  useEffect(() => {
+    if (selectedCookbook && form.getValues('cookbookId') !== selectedCookbook.id) {
+      form.setValue('cookbookId', selectedCookbook.id);
+      setIsCreatingNewCookbook(false); // Ensure we're not in 'create new' mode if a cookbook is selected
+    } else if (!selectedCookbook && form.getValues('cookbookId')) {
+      form.setValue('cookbookId', ''); // Clear if no cookbook is selected
+    }
+  }, [selectedCookbook, form]);
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);

@@ -300,7 +300,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (error) throw error;
       setSavedMealPlans(data || []);
     } catch (error) {
-      console.error('Load meal plans error:', error);
+      console.error('Error loading meal plans', error);
       toast({
         title: 'Error loading meal plans',
         description: 'Failed to fetch your saved meal plans.',
@@ -428,6 +428,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        // First, sync guest data if any, before loading user-specific data
+        if (guestCookbooks.length > 0 || guestRecipes.length > 0) {
+          await syncGuestDataToUser(); 
+        }
+
         const { data: userData, error: fetchUserError } = await supabase
           .from('users')
           .select('*, favorite_recipe:recipes(id, title)') // Select favorite recipe details
@@ -471,10 +476,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               loadFriends(newUserData.id);
               loadMealPlans(newUserData.id); // Load meal plans on login
               loadCookbookInvitations(newUserData.id); // Load invitations on login
-              if (guestCookbooks.length > 0 || guestRecipes.length > 0) {
-                await syncGuestDataToUser(); // Wait for sync to complete
-                await loadCookbooks(newUserData.id); // Reload cookbooks after sync
-              }
             }
           }
         } else if (fetchUserError) {
@@ -487,11 +488,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           loadFriends(userData.id);
           loadMealPlans(userData.id); // Load meal plans on login
           loadCookbookInvitations(userData.id); // Load invitations on login
-          // Sync guest data after user is set and their data is loaded
-          if (guestCookbooks.length > 0 || guestRecipes.length > 0) {
-            await syncGuestDataToUser(); // Wait for sync to complete
-            await loadCookbooks(userData.id); // Reload cookbooks after sync
-          }
         }
       } else {
         setUser(null);

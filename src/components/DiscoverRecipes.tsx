@@ -35,9 +35,10 @@ interface Recipe {
 
 interface DiscoverRecipesProps {
   onRecipeAdded: (recipe: Recipe) => void;
+  onViewDetails: (recipe: Recipe) => void; // New prop
 }
 
-const DiscoverRecipes: React.FC<DiscoverRecipesProps> = ({ onRecipeAdded }) => {
+const DiscoverRecipes: React.FC<DiscoverRecipesProps> = ({ onRecipeAdded, onViewDetails }) => {
   const { user } = useAppContext();
 
   const { data: publicRecipes, isLoading, error } = useQuery<Recipe[]>({
@@ -109,6 +110,7 @@ const DiscoverRecipes: React.FC<DiscoverRecipesProps> = ({ onRecipeAdded }) => {
                   recipe={recipe}
                   onRecipeAdded={onRecipeAdded} // Allow adding to user's cookbook
                   showFullDetails={false} // Default to condensed view
+                  onViewDetails={onViewDetails} // Pass onViewDetails
                 />
               ))}
             </div>
