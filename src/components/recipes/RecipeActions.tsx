@@ -192,7 +192,10 @@ const RecipeActions: React.FC<RecipeActionsProps> = ({ recipe, onAddToShoppingLi
         variant="secondary"
         size="sm"
         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-        onClick={() => setShowAddCookbookDialog(true)}
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent drag-and-drop interference
+          setShowAddCookbookDialog(true);
+        }}
       >
         <BookOpen className="h-4 w-4 mr-1" />
         Add to Cookbook
