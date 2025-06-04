@@ -177,34 +177,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [cookbookInvitations, setCookbookInvitations] = useState<CookbookInvitation[]>([]); // New state
   const [hasShownWelcomeToast, setHasShownWelcomeToast] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('welcomeToastShown') === 'true';
+      try {
+        return sessionStorage.getItem('welcomeToastShown') === 'true';
+      } catch (e) {
+        console.error("Failed to read welcomeToastShown from sessionStorage:", e);
+        return false;
+      }
     }
     return false;
   });
   const [guestCookbooks, setGuestCookbooks] = useState<Cookbook[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('guestCookbooks');
-      return saved ? JSON.parse(saved) : [];
+      try {
+        const saved = localStorage.getItem('guestCookbooks');
+        return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        console.error("Failed to read guestCookbooks from localStorage:", e);
+        return [];
+      }
     }
     return [];
   });
   const [guestRecipes, setGuestRecipes] = useState<Recipe[]>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('guestRecipes');
-      return saved ? JSON.parse(saved) : [];
+      try {
+        const saved = localStorage.getItem('guestRecipes');
+        return saved ? JSON.parse(saved) : [];
+      } catch (e) {
+        console.error("Failed to read guestRecipes from localStorage:", e);
+        return [];
+      }
     }
     return [];
   });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('guestCookbooks', JSON.stringify(guestCookbooks));
+      try {
+        localStorage.setItem('guestCookbooks', JSON.stringify(guestCookbooks));
+      } catch (e) {
+        console.error("Failed to write guestCookbooks to localStorage:", e);
+      }
     }
   }, [guestCookbooks]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('guestRecipes', JSON.stringify(guestRecipes));
+      try {
+        localStorage.setItem('guestRecipes', JSON.stringify(guestRecipes));
+      } catch (e) {
+        console.error("Failed to write guestRecipes to localStorage:", e);
+      }
     }
   }, [guestRecipes]);
 
@@ -427,8 +450,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setGuestCookbooks([]);
       setGuestRecipes([]);
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('guestCookbooks');
-        localStorage.removeItem('guestRecipes');
+        try {
+          localStorage.removeItem('guestCookbooks');
+          localStorage.removeItem('guestRecipes');
+        } catch (e) {
+          console.error("Failed to clear guest data from localStorage:", e);
+        }
       }
 
       // Invalidate queries to refetch user's actual data from Supabase
@@ -582,7 +609,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCookbookInvitations([]); // Clear invitations on explicit sign out
     setHasShownWelcomeToast(false); // Reset welcome toast state
     if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('welcomeToastShown'); // Clear session storage flag
+      try {
+        sessionStorage.removeItem('welcomeToastShown'); // Clear session storage flag
+      } catch (e) {
+        console.error("Failed to clear welcomeToastShown from sessionStorage:", e);
+      }
     }
     // Do NOT clear guest data here, as it should persist until synced
   };

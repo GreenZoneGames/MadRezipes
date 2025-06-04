@@ -26,7 +26,8 @@ export function ThemeProvider({
         return (savedTheme && (savedTheme === "dark" || savedTheme === "light" || savedTheme === "system")
           ? savedTheme
           : defaultTheme) as Theme
-      } catch {
+      } catch (e) {
+        console.error("Failed to read theme from localStorage:", e);
         return defaultTheme as Theme
       }
     }
@@ -54,8 +55,9 @@ export function ThemeProvider({
     setTheme: (theme: Theme) => {
       try {
         localStorage.setItem("theme", theme)
-      } catch {
-        // Ignore localStorage errors
+      } catch (e) {
+        console.error("Failed to write theme to localStorage:", e);
+        // Ignore localStorage errors, state will still update
       }
       setTheme(theme)
     },
