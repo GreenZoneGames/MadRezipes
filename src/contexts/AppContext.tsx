@@ -93,6 +93,7 @@ interface AppContextType {
   guestRecipes: Recipe[]; // New state for guest recipes
   savedMealPlans: SavedMealPlan[]; // New state for saved meal plans
   cookbookInvitations: CookbookInvitation[]; // New state for cookbook invitations
+  hasShownWelcomeToast: boolean; // New: Track if welcome toast has been shown for current session
   setGuestRecipes: React.Dispatch<React.SetStateAction<Recipe[]>>; // Added to default context
   setSelectedCookbook: (cookbook: Cookbook | null) => void;
   signIn: (email: string, password: string) => Promise<void>;
@@ -132,6 +133,7 @@ const defaultAppContext: AppContextType = {
   guestRecipes: [],
   savedMealPlans: [], // Default for new state
   cookbookInvitations: [], // Default for new state
+  hasShownWelcomeToast: false, // Default for new state
   setGuestRecipes: () => {}, // Dummy function added here
   setSelectedCookbook: () => {},
   signIn: async () => {},
@@ -173,6 +175,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [friends, setFriends] = useState<Friend[]>([]);
   const [savedMealPlans, setSavedMealPlans] = useState<SavedMealPlan[]>([]); // New state
   const [cookbookInvitations, setCookbookInvitations] = useState<CookbookInvitation[]>([]); // New state
+  const [hasShownWelcomeToast, setHasShownWelcomeToast] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('welcomeToastShown') === 'true';
+    }
+    return false;
+  });
   const [guestCookbooks, setGuestCookbooks] = useState<Cookbook[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('guestCookbooks');
@@ -495,6 +503,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setFriends([]); // Clear Supabase friends if logged out
         setSavedMealPlans([]); // Clear saved meal plans if logged out
         setCookbookInvitations([]); // Clear invitations if logged out
+        // Do NOT clear guest data here, as it should persist until synced
       }
     } catch (error) {
       console.error('Check user error:', error);
@@ -563,12 +572,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setFriends([]);
     setSavedMealPlans([]); // Clear saved meal plans on explicit sign out
     setCookbookInvitations([]); // Clear invitations on explicit sign out
-    setGuestCookbooks([]); // Clear guest data on explicit sign out
-    setGuestRecipes([]);
+    setHasShownWelcomeToast(false); // Reset welcome toast state
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('guestCookbooks');
-      localStorage.removeItem('guestRecipes');
+      sessionStorage.removeItem('welcomeToastShown'); // Clear session storage flag
     }
+    // Do NOT clear guest data here, as it should persist until synced
   };
 
   const createCookbook = async (name: string, description?: string, isPublic: boolean = false): Promise<Cookbook | null> => {
@@ -1438,6 +1446,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         guestRecipes,
         savedMealPlans,
         cookbookInvitations, // Added
+        hasShownWelcomeToast, // Added
         setGuestRecipes,
         setSelectedCookbook,
         signIn,

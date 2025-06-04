@@ -42,7 +42,7 @@ const TopBar: React.FC<TopBarProps> = ({
   selectedMonth,
   setSelectedMonth,
 }) => {
-  const { user } = useAppContext();
+  const { user, hasShownWelcomeToast, setHasShownWelcomeToast } = useAppContext();
   const isMobile = useIsMobile();
   const [showAuth, setShowAuth] = useState(false);
   const [showMessages, setShowMessages] = useState(false);
@@ -51,20 +51,17 @@ const TopBar: React.FC<TopBarProps> = ({
   const [showShoppingListDialog, setShowShoppingListDialog] = useState(false); // Re-added state
   const [showMealPlannerDialog, setShowMealPlannerDialog] = useState(false); // Re-added state
 
-  const [hasShownLoginToast, setHasShownLoginToast] = useState(false);
-
   useEffect(() => {
-    if (user && !hasShownLoginToast) {
+    if (user && !hasShownWelcomeToast) {
       const displayName = user.username || user.email?.split('@')[0] || 'User';
       toast({
         title: `🍽️ Welcome back, ${displayName}!`,
         description: 'Successfully signed in to MadRezipes.'
       });
-      setHasShownLoginToast(true);
-    } else if (!user && hasShownLoginToast) {
-      setHasShownLoginToast(false);
+      setHasShownWelcomeToast(true); // Update context state
+      sessionStorage.setItem('welcomeToastShown', 'true'); // Persist in session storage
     }
-  }, [user, hasShownLoginToast]);
+  }, [user, hasShownWelcomeToast, setHasShownWelcomeToast]);
 
   const displayName = user?.username || user?.email?.split('@')[0] || 'User';
 
